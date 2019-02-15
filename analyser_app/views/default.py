@@ -6,7 +6,7 @@ from sqlalchemy.exc import DBAPIError
 from .. import models
 
 
-@view_config(route_name='home', renderer='../templates/mytemplate.mako')
+@view_config(route_name='home', renderer='../templates/default.mako')
 def my_view(request):
     try:
         query = request.dbsession.query(models.MyModel)
