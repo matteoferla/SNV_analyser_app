@@ -1,0 +1,5 @@
+0.0
+---
+
+- Cookiecutter generated alchemy+Mako pyramid repo
+- DB initialised
