@@ -14,42 +14,42 @@ window.ft = new FeatureViewer('${variant.seq}',
             });
 
 <%
-    domains=[{
+    domains=str([{
             'x': domain['location']['start'],
             'y': domain['location']['end'],
             'id': 'domain_{s}_{e}'.format(s=domain['location']['start'],e=domain['location']['end']),
             'description': domain['id']+' '+domain['accession']}
-        for domain in variant.pfam]
+        for domain in variant.pfam])
 
-    gnomad=[{
+    gnomad=str([{
             'x': int(allele[0].split("-")[0]),
             'y': int(allele[0].split("-")[0]),
             'id': 'variant_{s}'.format(s=allele[0].split("-")[0]),
             'description': allele[1][0]+allele[0]+allele[1][-1]}
-        for allele in variant.iter_allele() if allele[0].split("-")[0].isdigit()]
+        for allele in variant.iter_allele() if allele[0].split("-")[0].isdigit()])
 
-    modified=[{
+    modified=str([{
             'x': resi,
             'y': resi,
             'id': 'modified_{s}'.format(s=resi),
-            'description': resn} for resi, resn in variant.modified_residues]
+            'description': resn} for resi, resn in variant.modified_residues])
 
-    our=[{'x': variant.resi,
+    our=str([{'x': variant.resi,
             'y': variant.resi,
             'id': 'modified_{s}'.format(s=variant.resi),
-            'description': variant.mutation}]
+            'description': variant.mutation}])
 
-    elm=[{
+    elm=str([{
         'x': motif[0],
         'y': motif[1],
         'id': 'modified_{s}_{e}'.format(s=motif[0],e=motif[1]),
-        'description': motif[2]} for motif in variant.ELM]
+        'description': motif[2]} for motif in variant.ELM])
 
 %>
 
 % if our:
     ft.addFeature({
-        data: ${our},
+        data: ${our|n},
         name: "Candidate SNP",
         className: "our_SNP",
         color: "indianred",
@@ -60,7 +60,7 @@ window.ft = new FeatureViewer('${variant.seq}',
 
 %if domains:
     ft.addFeature({
-        data: ${domains},
+        data: ${domains|n},
         name: "Domain",
         className: "domain",
         color: "lightblue",
@@ -71,7 +71,7 @@ window.ft = new FeatureViewer('${variant.seq}',
 
 % if gnomad:
     ft.addFeature({
-        data: ${gnomad},
+        data: ${gnomad|n},
         name: "gNOMAD",
         className: "variant",
         color: "lightblue",
@@ -82,7 +82,7 @@ window.ft = new FeatureViewer('${variant.seq}',
 
 % if modified:
     ft.addFeature({
-        data: ${modified},
+        data: ${modified|n},
         name: "Modified residues",
         className: "modified",
         color: "slateblue",
@@ -93,7 +93,7 @@ window.ft = new FeatureViewer('${variant.seq}',
 
 % if elm:
     ft.addFeature({
-        data: ${elm},
+        data: ${elm|n},
         name: "Motif prediction",
         className: "elm",
         color: "lavender",
@@ -206,7 +206,8 @@ function show_residue(resi, protein) {
     window.addEventListener( "resize", function( event ){stage.handleResize();}, false );
 % endif
 % if variant.pdb_file: ##okay, this is problematic and should be coded differently...
-    stage.loadFile( "${home}/${variant.gene}.pdb", { defaultRepresentation: true } ).then(function (o) {show_mutant(o);window.pdb=o});
+    ### todo get ${home} to work...
+    stage.loadFile( "${variant.gene}.pdb", { defaultRepresentation: true } ).then(function (o) {show_mutant(o);window.pdb=o});
 % elif variant.pdb_code:
     stage.loadFile( "rcsb://${variant.pdb_code}", { defaultRepresentation: true } ).then(function (o) {show_mutant(o);window.pdb=o});
 % endif

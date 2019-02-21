@@ -3,7 +3,7 @@
 <%block name="topmost">
     <section class="jumbotron text-center">
         <div class="container">
-            <h1 class="jumbotron-heading">SNV analyser ${project}</h1>
+            <h1 class="jumbotron-heading">SNV analyser</h1>
             <p class="lead text-muted">This tool gathers information from various sources about a gene and ranks possible effect a SNV may have.
                 <br/>(signal peptide loss, binding site, active site or ddG)</p>
         </div>

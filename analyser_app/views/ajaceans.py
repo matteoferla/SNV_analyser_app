@@ -113,8 +113,6 @@ def parallel_parse_protein(uniprot, gene_name, return_complete=True):
            'manual':            self.add_manual_data,
            'GO terms':          self.fetch_go,
            'Binding partners':  self.fetch_binders}
-    #temp todo remove
-    tasks={'Uniprot': self.parse_uniprot}
     threads={}
     for k, fn in tasks.items():
         t = threading.Thread(target=fn)

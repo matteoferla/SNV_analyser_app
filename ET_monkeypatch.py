@@ -63,6 +63,21 @@ class ElementalExpansion:
         else:
             return False
 
+    def get_subtag(self, tag):
+        """Gets only the first subtag."""
+        for elem in self:
+            if elem.is_tag(tag):
+                return elem
+        else:
+            return None
+
+    def get_sub_by_type(self, type_attr):
+        """Gets only the first subtag."""
+        for elem in self:
+            if elem.has_attr('type',type_attr):
+                return elem
+        else:
+            return None
 
 ET.Element.ns_strip = ElementalExpansion.ns_strip
 ET.Element.is_tag = ElementalExpansion.is_tag
@@ -70,3 +85,5 @@ ET.Element.describe = ElementalExpansion.describe
 ET.Element.is_human = ElementalExpansion.is_human
 ET.Element.has_attr = ElementalExpansion.has_attr
 ET.Element.has_text = ElementalExpansion.has_text
+ET.Element.get_subtag = ElementalExpansion.get_subtag
+ET.Element.get_sub_by_type = ElementalExpansion.get_sub_by_type

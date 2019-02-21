@@ -1,4 +1,4 @@
-<%page args="variant"/>
+<%page args="variant, home=''"/>
 ## variant is a dictionary here!!
 
 <div class="container-fluid ">
@@ -44,5 +44,5 @@
 </div>
 
 
-<%include file="results.tour.js.mako" args="variant=variant"></%include>
-<%include file="results.js.mako"      args="variant=variant"></%include>
+<%include file="results.tour.js.mako" args="variant=variant, home=''"></%include>
+<%include file="results.js.mako"      args="variant=variant, home=''"></%include>
