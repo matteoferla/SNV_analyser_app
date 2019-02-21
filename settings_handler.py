@@ -17,6 +17,7 @@ class GlobalSettings:
     This class is container for the paths, which are used by both Variant and Tracker classes.
     Hence why in these two is the attribute .settings
     """
+    verbose = False
     subdirectory_names = ('manual', 'transcript', 'protein', 'uniprot', 'pfam', 'pdb', 'ELM', 'ELM_variant', 'pdb_pre_allele', 'pdb_post_allele', 'ExAC', 'pdb_blast', 'pickle', 'references', 'go',
                           'binders')
 

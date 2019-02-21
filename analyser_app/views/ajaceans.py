@@ -11,7 +11,6 @@ Whereas it is true that Thread names can be assigned, the importance is their un
     
     request.session['threads'] = {Unique_thread_name: thread_description_that_makes_sense, ...}
 
-
 """
 
 from pyramid.view import view_config
@@ -90,7 +89,8 @@ def get_results_view(request):
     variant.predict_effect()
     return {'variant': variant}
 
-#### move out once complte.
+
+#### TODO move out once complte.
 def parallel_parse_protein(uniprot, gene_name, return_complete=True):
     """
     A parallel version of the protein fetcher.
