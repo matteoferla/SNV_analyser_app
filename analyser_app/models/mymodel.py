@@ -14,5 +14,4 @@ class MyModel(Base):
     name = Column(Text)
     value = Column(Integer)
 
-
 Index('my_index', MyModel.name, unique=True, mysql_length=255)

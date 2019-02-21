@@ -3,7 +3,7 @@
 <%block name="topmost">
     <section class="jumbotron text-center">
         <div class="container">
-            <h1 class="jumbotron-heading">SNV analyser</h1>
+            <h1 class="jumbotron-heading">SNV analyser ${project}</h1>
             <p class="lead text-muted">This tool gathers information from various sources about a gene and ranks possible effect a SNV may have.
                 <br/>(signal peptide loss, binding site, active site or ddG)</p>
         </div>
@@ -15,7 +15,7 @@
 ################ main
 
 
-<div class="card">
+<div class="card" id="input_card">
     <h3 class="card-header">Input new</h3>
     <div class="card-body">
         <div class="row">
@@ -42,17 +42,25 @@
         </div>
             </div>
             ### analyse button
-            <div class="col-6 col-lg-1">
+            <div class="col-6 col-lg-3">
                 <div class="btn-group" role="group" aria-label="analyse">
                     <button type="button" class="btn btn-primary" id="analyse">Analyse</button>
+                    <button type="button" class="btn btn-danger" id="reset">Reset</button>
                 </div>
             </div>
         </div>
+    </div>
+</div>
+<div class="card mt-5" id="retrieval_card">
+    <h3 class="card-header">Retrieve previous</h3>
+    <div class="card-body">
+        <p>This would be Session specific. Authentication? Alchemy SQLite DB included, but no models made.</p>
+    </div>
+</div>
 
-
-        <hr>
-        <h3>Retrieve previous</h3>
-        <p>This would be Session specific. Authentication?</p>
+<div class="card mt-5" id="result_card" style="display: None;">
+    <h3 class="card-header">Results</h3>
+    <div class="card-body">
     </div>
 </div>
 

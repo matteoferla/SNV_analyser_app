@@ -8,13 +8,13 @@ from .. import models
 
 @view_config(route_name='home', renderer='../templates/default.mako')
 def my_view(request):
-    try:
+    return {'project': 'analyser_app', 'needs_tour': True, 'needs_feat': True, 'needs_ngl': False}
+
+'''    try:
         query = request.dbsession.query(models.MyModel)
         one = query.filter(models.MyModel.name == 'one').first()
     except DBAPIError:
-        return Response(db_err_msg, content_type='text/plain', status=500)
-    return {'one': one, 'project': 'analyser_app'}
-
+        return Response(db_err_msg, content_type='text/plain', status=500)'''
 
 db_err_msg = """\
 Pyramid is having a problem using your SQL database.  The problem
