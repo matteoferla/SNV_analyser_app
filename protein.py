@@ -245,9 +245,21 @@ class Protein:
         self.alternative_fullname_list = []
         self.alternative_shortname_list = []
         self.features={}  #see _parse_protein_feature. Dictionary of key: type of feature, value = list of dict with the FeatureViewer format (x,y, id, description)
-        self.partners ={'interactant': []} # lists not sets as it gave a pickle issue.
+        self.partners ={'interactant': [],  #from uniprot
+                        'BioGRID': [],  #from biogrid downlaoad
+                        'SSL': [],  #Slorth data
+                        'stringDB highest': [],  # score >900
+                        'stringDB high': [],  #900 > score > 700
+                        'stringDB medium': [], #400 > score > 400
+                        'stringDB low': [] #score < 400
+                        } # lists not sets as it gave a pickle issue.
         self.diseases=[] # 'description', 'name', 'id', 'MIM'
         self.pdbs = []  # {'description': elem.attrib['id'], 'id': elem.attrib['id'], 'x': loca[0], 'y': loca[1]}
+        ### ExAC
+        self.ExAC_type = 'Unparsed' # Dominant | Recessive | None | Unknown (=???)
+        self.pLI = -1
+        self.pRec = -1
+        self.pNull = -1
         ### junk
         self.other = other ### this is a garbage bin. But a handy one.
         self.logbook = [] # debug purposes only. See self.log()
@@ -449,6 +461,86 @@ class Protein:
         else:
             raise ValueError('not list or dict pfam data: ' + str(xml))
 
+    @_failsafe
+    def fetch_binders(self):
+        file = os.path.join(self.settings.binders_folder, self.uniprot + '.json')
+        if os.path.isfile(file):
+            with open(file) as f:
+                self.partners = json.load(f)
+        else:
+            for row in self.settings.open('ssl'):
+                # CHEK1	MTOR	ENSG00000149554	ENSG00000198793	H. sapiens	BioGRID	2208318, 2342099, 2342170	3
+                if self.gene in row:
+                    protein_set = set(row.split('\t')[:2])
+                    protein_set.discard(self.gene)
+                    if protein_set == 1:
+                        self.partners['SSL'].append(protein_set.pop())
+                    else:  # most likely a partial match.
+                        pass
+                        # warn('Impossible SSL '+row)
+            for row in self.settings.open('huri'):
+                # Unique identifier for interactor A	Unique identifier for interactor B	Alternative identifier for interactor A	Alternative identifier for interactor B	Aliases for A	Aliases for B	Interaction detection methods	First author	Identifier of the publication	NCBI Taxonomy identifier for interactor A	NCBI Taxonomy identifier for interactor B	Interaction types	Source databases	Interaction identifier(s)	Confidence score	Complex expansion	Biological role A	Biological role B	Experimental role A	Experimental role B	Interactor type A	Interactor type B	Xref for interactor A	Xref for interactor B	Xref for the interaction	Annotations for interactor A	Annotations for interactor B	Annotations for the interaction	NCBI Taxonomy identifier for the host organism	Parameters of the interaction	Creation date	Update date	Checksum for interactor A	Checksum for interactor B	Checksum for interaction	negative	Feature(s) for interactor A	Feature(s) for interactor B	Stoichiometry for interactor A	Stoichiometry for interactor B	Participant identification method for interactor A	Participant identification method for interactor B
+                # -	uniprotkb:Q6P1W5-2	ensembl:ENST00000507897.5|ensembl:ENSP00000426769.1|ensembl:ENSG00000213204.8	ensembl:ENST00000373374.7|ensembl:ENSP00000362472.3|ensembl:ENSG00000142698.14	human orfeome collection:2362(author assigned name)	human orfeome collection:5315(author assigned name)	"psi-mi:""MI:1112""(two hybrid prey pooling approach)"	Yu et al.(2011)	pubmed:21516116	taxid:9606(Homo Sapiens)	taxid:9606(Homo Sapiens)	"psi-mi:""MI:0407""(direct interaction)"	-	-	-	-	-	-	"psi-mi:""MI:0496""(bait)"	"psi-mi:""MI:0498""(prey)"	"psi-mi:""MI:0326""(protein)"	"psi-mi:""MI:0326""(protein)"	-	-	-	"comment:""vector name: pDEST-DB""|comment:""centromeric vector""|comment:""yeast strain: Y8930"""	"comment:""vector name: pDEST-AD""|comment:""centromeric vector""|comment:""yeast strain: Y8800"""	"comment:""Found in screens 1."""	taxid:4932(Saccharomyces cerevisiae)	-	6/30/2017	-	-	-	-	-	DB domain (n-terminal): gal4 dna binding domain:n-n	AD domain (n-terminal): gal4 activation domain:n-n	-	-	"psi-mi:""MI1180""(partial DNA sequence identification)"	"psi-mi:""MI1180""(partial DNA sequence identification)"
+                if ':' + self.gene + '(' in row:  #
+                    protein_set = re.findall('\:(\w+)\(gene name\)', row)
+                    if len(protein_set) == 2:
+                        protein_set = set(protein_set)
+                        protein_set.discard(self.gene)
+                        if protein_set == 1:
+                            self.partners['HuRI'].append(protein_set.pop())
+                    # t = set(row.split('\t')[:2])
+                    # print(t)
+                    # if t:
+                    #     for p in t:
+                    #         if 'uniprot' in p:
+                    #             # match uniprot id to gene with go_human or similar.
+                    #             match=[r for r in self.settings.open('go_human') if p.replace('uniprotkb:','') in r]
+                    #             if match:
+                    #                 self.partners['HuRI'].append(match[0].split('\t')[2]) #uniprotKB	A0A024RBG1	NUDT4B		GO:0003723
+                    #             else:
+                    #                 warn('Unmatched',p)
+                    #         else:
+                    #             warn('Unmatched', p)
+                    else:
+                        warn('Impossible HuRI ' + row)
+            for row in self.settings.open('biogrid'):
+                # ID Interactor A	ID Interactor B	Alt IDs Interactor A	Alt IDs Interactor B	Aliases Interactor A	Aliases Interactor B	Interaction Detection Method	Publication 1st Author	Publication Identifiers	Taxid Interactor A	Taxid Interactor B	Interaction Types	Source Database	Interaction Identifiers	Confidence Values
+                # entrez gene/locuslink:6416	entrez gene/locuslink:2318	biogrid:112315|entrez gene/locuslink:MAP2K4	biogrid:108607|entrez gene/locuslink:FLNC	entrez gene/locuslink:JNKK(gene name synonym)|entrez gene/locuslink:JNKK1(gene name synonym)|entrez gene/locuslink:MAPKK4(gene name synonym)|entrez gene/locuslink:MEK4(gene name synonym)|entrez gene/locuslink:MKK4(gene name synonym)|entrez gene/locuslink:PRKMK4(gene name synonym)|entrez gene/locuslink:SAPKK-1(gene name synonym)|entrez gene/locuslink:SAPKK1(gene name synonym)|entrez gene/locuslink:SEK1(gene name synonym)|entrez gene/locuslink:SERK1(gene name synonym)|entrez gene/locuslink:SKK1(gene name synonym)	entrez gene/locuslink:ABP-280(gene name synonym)|entrez gene/locuslink:ABP280A(gene name synonym)|entrez gene/locuslink:ABPA(gene name synonym)|entrez gene/locuslink:ABPL(gene name synonym)|entrez gene/locuslink:FLN2(gene name synonym)|entrez gene/locuslink:MFM5(gene name synonym)|entrez gene/locuslink:MPD4(gene name synonym)	psi-mi:"MI:0018"(two hybrid)	"Marti A (1997)"	pubmed:9006895	taxid:9606	taxid:9606	psi-mi:"MI:0407"(direct interaction)	psi-mi:"MI:0463"(biogrid)	biogrid:103	-
+                if self.gene in row:
+                    protein_set = set([re.search('locuslink:([\w\-\.]+)\|?', e.replace('\n', '')).group(1) for e in row.split('\t')[2:4]])
+                    protein_set.discard(self.gene)
+                    if len(protein_set) == 1:
+                        matched_protein = protein_set.pop()
+                        self.partners['BioGRID'].append(matched_protein)
+            if len(self.ENSP) > 10:
+                with self.settings.open('string') as ref:
+                    for row in ref:
+                        if self.ENSP in row:
+                            protein_set = set(row.split())
+                            protein_set.discard('9606.' + self.ENSP)
+                            score = 0
+                            converted_gene = ''
+                            for matched_protein in protein_set:
+                                if matched_protein.isdigit():
+                                    score = int(matched_protein)
+                                else:
+                                    matched_protein = matched_protein.replace('9606.', '')
+                                    with self.settings.open('ensembl') as ref:
+                                        for gene in ref:
+                                            if matched_protein in gene:
+                                                converted_gene = gene.split('\t')[2]
+                                                break
+                                        else:
+                                            converted_gene = matched_protein  # a lie
+                            if score > 900:  # highest confidence
+                                self.partners['stringDB highest'].append(converted_gene)
+                            elif score > 700:  # high confidence
+                                self.partners['stringDB high'].append(converted_gene)
+                            elif score > 400:  # medium confidence
+                                self.partners['stringDB medium'].append(converted_gene)
+            with open(file, 'w') as f:
+                json.dump({db: list(self.partners[db]) for db in self.partners}, f)  # makes no difference downstream
+        return self
 
 
     def fetch_ENSP(self):
@@ -498,13 +590,42 @@ class Protein:
         pass
         ##TOdo write>!
 
+    #to do fix
+    def parse_ExAC_type(self):
+        if self.pLI < 0:  # error.
+            self.ExAC_type='Unknown'
+        elif self.pLI > max(self.pRec, self.pNull):
+            self.ExAC_type ='Dominant'
+        elif self.pRec > max(self.pLI, self.pNull):
+            self.ExAC_type ='Recessive'
+        elif self.pNull > max(self.pLI, self.pRec):
+            self.ExAC_type ='None'
+        else:
+            self.ExAC_type ='Unknown'
+        return self
+
+    @_failsafe
+    def parse_pLI(self):
+        for line in csv.DictReader(self.settings.open('ExAC_pLI'), delimiter='\t'):
+            # transcript	gene	chr	n_exons	cds_start	cds_end	bp	mu_syn	mu_mis	mu_lof	n_syn	n_mis	n_lof	exp_syn	exp_mis	exp_lof	syn_z	mis_z	lof_z	pLI	pRec	pNull
+            if self.gene == line['gene']:
+                self.pLI = float(line['pLI'])  # intolerant of a single loss-of-function variant (like haploinsufficient genes, observed ~ 0.1*expected)
+                self.pRec = float(line['pRec'])  # intolerant of two loss-of-function variants (like recessive genes, observed ~ 0.5*expected)
+                self.pNull = float(line['pNull'])  # completely tolerant of loss-of-function variation (observed = expected)
+                self.parse_ExAC_type()
+                break
+        else:
+            warn('Gene {} not found in ExAC table.'.format(self.gene))
+        return self
+
+
     ## depraction
     def write(self, file=None):
         raise Exception('DEPRACATED. use write_uniprot')
 
 
 
-import unittest
+import unittest, json, csv
 
 
 
@@ -529,13 +650,51 @@ class TestProtein(unittest.TestCase):
         irak.parse_uniprot()
         self.assertEqual(irak.sequence[0], 'M')
 
-
     def test_full_parse(self):
+        return 1
         print('testing serial parsing')
         irak = Protein(uniprot = 'Q9NWZ3', gene = 'IRAK4')
         irak.parse_all(mode='serial')
 
+    def test_extend(self):
+        print('testing extended')
+        with open('data/human_prot_namedex.json') as f:
+            namedex = json.load(f)
 
+        def get_friend(name):
+            print(name)
+            try:
+                friend = Protein(uniprot=namedex[name], gene=name)
+                friend.parse_uniprot()
+                friend.parse_pLI()
+                #friend.fetch_binders()
+                return friend
+            except Exception as err:
+                print(err)
+                return None
+
+        dock = get_friend('DOCK11')
+        dock.fetch_binders()
+        print(dock.partners)
+        with open('Dock11_test.csv','w',newline='') as fh:
+            sheet = csv.DictWriter(fh, fieldnames='name uniprot uniprot_name group disease pLI pRec pNull'.split())
+            sheet.writeheader()
+            friends=set([f for l in dock.partners.values() for f in l])
+            for friend in friends:
+                groups = [g for g in dock.partners.keys() if friend in dock.partners[g]]
+                fprot = get_friend(friend)
+                if fprot:
+                    sheet.writerow({'name': friend,
+                                    'uniprot': fprot.uniprot,
+                                    'uniprot_name': fprot.uniprot_name,
+                                    'group': ' | '.join(groups),
+                                    'disease': ' | '.join([d['name'] for d in fprot.diseases]),
+                                    'pLI': fprot.pLI,
+                                    'pRec': fprot.pRec,
+                                    'pNull': fprot.pNull
+                    })
+                else:
+                    sheet.writerow({'name': friend})
 
 
 if __name__ == '__main__':

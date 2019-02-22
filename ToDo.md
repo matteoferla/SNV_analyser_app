@@ -24,6 +24,11 @@
 
 &#10005; Deactivate manual data? This ought to be session specific not global.
 
+## Extra data
+
+&#10005; coservation... this is tricky. I think the best bet is to use Uniprot's Uniprot-50 or -80 and do a blast beforehand.
+&#10005; phosphorylation... Phosphosite downloaded. Just needs retrieval.
+
 
 ## Preallocate
 
@@ -35,10 +40,7 @@
 
 &#10005; Users and such. Alchemy running.
 
-## Extra data
 
-* coservation
-* phosphorylation
 
 ## Models
 
