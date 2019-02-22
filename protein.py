@@ -251,6 +251,7 @@ class Protein:
         ### junk
         self.other = other ### this is a garbage bin. But a handy one.
         self.logbook = [] # debug purposes only. See self.log()
+        self._threads = {}
         ### fill
         if entry:
             self._parse_uniprot_xml(entry)
@@ -435,7 +436,18 @@ class Protein:
         xml = self.xml_fetcher('uniprot')
         self.xml = ET.fromstring(xml)[0]
         self._parse_unicode_xml(self.xml)
+        return self
 
+    @_failsafe
+    def parse_pfam(self):
+        # https://pfam.xfam.org/help#tabview=tab11
+        xml = self.xml_fetch_n_parser('pfam')
+        if isinstance(xml, list):
+            self.pfam = xml
+        elif isinstance(xml, dict):
+            self.pfam = [xml]
+        else:
+            raise ValueError('not list or dict pfam data: ' + str(xml))
 
 
 
@@ -445,10 +457,42 @@ class Protein:
             if self.gene in row:
                 if row.count(' ') > 5:
                     self.ENSP = row.split()[5]
-                return self
+                break
         else:
             warn('Unknown Ensembl protein id for ' + self.gene)
+        return self
 
+    def parse_all(self, mode='parallel'):
+        """
+        Gets all the data.
+        :param mode: parallel | backgroud (=parallel but not complete) | serial (or anythign)
+        :return:
+        """
+        tasks = {'Uniprot': self.parse_uniprot,
+                 'PFam': self.parse_pfam,
+                 'ELM': self.query_ELM,
+                 'pLI': self.get_pLI,
+                 'ExAC': self.get_ExAC,
+                 'manual': self.add_manual_data,
+                 'GO terms': self.fetch_go,
+                 'Binding partners': self.fetch_binders}
+        if mode in ('parallel','background'):
+            threads = {}
+            for k, fn in tasks.items():
+                t = threading.Thread(target=fn)
+                t.start()
+                threads[k] = t
+            if mode == 'parallel':
+                for tn, t in threads.items():
+                    t.join()
+                return self
+            else:
+                self._threads = threads
+                return self
+        else:
+            for task_fn in tasks.values():
+                task_fn()
+        return self
 
     def predict_effect(self):
         pass
@@ -461,6 +505,8 @@ class Protein:
 
 
 import unittest
+
+
 
 class TestProtein(unittest.TestCase):
 
@@ -482,6 +528,12 @@ class TestProtein(unittest.TestCase):
         irak.gene = 'IRAK4'
         irak.parse_uniprot()
         self.assertEqual(irak.sequence[0], 'M')
+
+
+    def test_full_parse(self):
+        print('testing serial parsing')
+        irak = Protein(uniprot = 'Q9NWZ3', gene = 'IRAK4')
+        irak.parse_all(mode='serial')
 
 
 
