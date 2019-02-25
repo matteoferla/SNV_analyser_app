@@ -3,16 +3,18 @@ Protein was formerly called Variant.
 """
 
 
-import os, pickle, threading
+import os
+import pickle
+import re
+import threading
+from collections import defaultdict
 from datetime import datetime
 from warnings import warn
-from ET_monkeypatch import ET
+
+import requests  # for xml fetcher.
+
+from ET_monkeypatch import ET #monkeypatched version
 from settings_handler import global_settings
-from collections import defaultdict
-
-import requests # for xml fetcher.
-import re, xmlschema # for xml parser.
-
 
 
 #######################
@@ -337,6 +339,12 @@ class Protein:
             print(msg)
 
     ############################# Data gathering #############################
+    def _assert_fetchable(self, text):
+        if not self.settings.fetch:
+            raise FileNotFoundError(
+                text + ' failed previously (or never run previously) and `.settings.fetch` is enabled')
+
+
     def xml_fetcher(self, mode):  # mode = uniprot or pfam
         file = os.path.join(self.settings.get_folder_of(mode), self.uniprot + '_' + mode + '.xml')
         if os.path.isfile(file):

@@ -11,12 +11,20 @@ The Element can be monkeypached by importing xmlschema, as opposed to using the 
 To use: `from ET_monkeypatch import ET`
 """
 
-import xmlschema # needed to piggyback the monkeypatch. No schema validation used.
-import xml.etree.ElementTree as ET
 import re
 
+# Only the Python XML reader can be monkeypatched.
+# needed to piggyback the monkeypatch. No schema validation used.
+# copying method with xmlschema.
+import sys, importlib
+sys.modules.pop('xml.etree.ElementTree', None)
+sys.modules['_elementtree'] = None
+ET = importlib.import_module('xml.etree.ElementTree')
+########
+
 #### Expanding element tree element...
-class ElementalExpansion:
+
+class NewElement(ET.Element):
     """
     This is a collection of methods that helps handle better the ET.Element instnaces. They are monkeypatched to the class object itself.
     """
@@ -58,7 +66,9 @@ class ElementalExpansion:
         return False
 
     def has_text(self):
-        if re.match('\w', self.text):
+        if not self.text:
+            return False
+        if re.match('\w', str(self.text)):
             return True
         else:
             return False
@@ -74,16 +84,16 @@ class ElementalExpansion:
     def get_sub_by_type(self, type_attr):
         """Gets only the first subtag."""
         for elem in self:
-            if elem.has_attr('type',type_attr):
+            if elem.has_attr('type', type_attr):
                 return elem
         else:
             return None
 
-ET.Element.ns_strip = ElementalExpansion.ns_strip
-ET.Element.is_tag = ElementalExpansion.is_tag
-ET.Element.describe = ElementalExpansion.describe
-ET.Element.is_human = ElementalExpansion.is_human
-ET.Element.has_attr = ElementalExpansion.has_attr
-ET.Element.has_text = ElementalExpansion.has_text
-ET.Element.get_subtag = ElementalExpansion.get_subtag
-ET.Element.get_sub_by_type = ElementalExpansion.get_sub_by_type
+setattr(ET,'Element', NewElement)
+
+
+if __name__ == '__main__':
+    xml = ET.fromstring('<hello type="test">World</hello>')
+    print(type(ET.Element))
+    print(type(xml))
+    print(xml.is_tag('hello'))
