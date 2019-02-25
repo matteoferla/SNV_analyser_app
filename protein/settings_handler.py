@@ -21,6 +21,8 @@ class GlobalSettings:
     subdirectory_names = ('manual', 'transcript', 'protein', 'uniprot', 'pfam', 'pdb', 'ELM', 'ELM_variant', 'pdb_pre_allele', 'pdb_post_allele', 'ExAC', 'pdb_blast', 'pickle', 'references', 'go',
                           'binders')
     fetch = True
+    missing_attribute_tollerant = True
+    error_tollerant = False
 
     # getter of data_folder
     def _get_datafolder(self):

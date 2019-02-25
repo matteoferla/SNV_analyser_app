@@ -4,10 +4,8 @@ But mainly the `UniprotReader.convert('uniprot_sprot.xml')` method whcih generat
 Be warned that ET.Element is a monkeypatched version.
 """
 
-from Tracker_analyser import Variant
-
 import os, json, re
-from ET_monkeypatch import ET
+from protein.ET_monkeypatch import ET
 from protein import Protein
 
 ##### Uniprot reader

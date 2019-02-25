@@ -2,23 +2,31 @@ __description__ = """
 Protein was formerly called Variant.
 """
 
-
 import os
 import pickle
 import re
+import csv
+import json
+import time
+import markdown
+import xmlschema
 import threading
 from collections import defaultdict
 from datetime import datetime
 from warnings import warn
-
+from shutil import copyfile
 import requests  # for xml fetcher.
 
-from ET_monkeypatch import ET #monkeypatched version
-from settings_handler import global_settings
+from protein.ET_monkeypatch import ET #monkeypatched version
+from protein.settings_handler import global_settings
 
+from protein._protein_uniprot_mixin import _UniprotMixin
+# Protein inherits _UniprotMixin, which in turn inherits _BaseMixin
+# `.settings` class attribute is global_settings from settings_handler.py and is added by _BaseMixin.
+# _BaseMixin is inherited by _UniprotMixin contains _failsafe decorator, __getattr__ and settings
 
 #######################
-class Protein:
+class Protein(_UniprotMixin):
     """
     This class handles each protein entry from Uniprot. See __init__ for the list of variables stored.
     It fills them from various other sources.
@@ -29,8 +37,7 @@ class Protein:
 
     NB. The ET.Element has to be monkeypatched. See `help(ElementalExpansion)`
     """
-    error_tollerant = False  #mainly for dubug. # formally called croak
-    settings = global_settings
+
     # these older commands should be made redundant
     #    fetch = True
     #    croak = True
@@ -40,7 +47,7 @@ class Protein:
     def _failsafe(func):
         def wrapper(self, *args, **kargs):
             # the call happned after chekcing if it should croak on error so to make the traceback cleaner.
-            if self.error_tollerant:
+            if self.settings.error_tollerant:
                 try:
                     return func(self, *args, **kargs)
                 except Exception as error:
@@ -51,195 +58,15 @@ class Protein:
 
         return wrapper
 
-    def __getattr__(self, item):
-        if item not in self.__dict__:
-            if item in self.other:  ## it is in the trash!
-                warn('Accessed attribute in other list. Thanks for proving the key:value pair. But please dont abuse this backdoor!')
-                self.__dict__[item] = self.other[item]
-            else:
-                warn('Accessed non-existant attribute {item} for Protein instance. Likely cause the code changed, but the from_pickle flag is True.'.format(v=self, item=item))
-                self.__dict__[item] = 'Unknown'
-        return self.__dict__[item]
-
-    ############################# UNIPROT PARSING METHODS #############################
-    @_failsafe
-    def _parse_protein_element(self, elem):
-        for name_el in elem:
-            if name_el.is_tag('recommendedName') and name_el.has_text():
-                self.recommended_name = name_el.text.rstrip()
-            elif name_el.is_tag('recommendedName'):
-                for subname_el in name_el:
-                    if subname_el.is_tag('fullName'):
-                        self.recommended_name = subname_el.text.rstrip()
-                    else:
-                        self.alternative_shortname_list.append(subname_el.text.rstrip())
-            else:
-                for subname_el in name_el:
-                    if subname_el.is_tag('fullName'):
-                        self.alternative_fullname_list.append(subname_el.text.rstrip())
-                    else:
-                        self.alternative_shortname_list.append(subname_el.text.rstrip())
-
-    @_failsafe
-    def _parse_protein_dbReference(self, elem):
-        if elem.has_attr('type','Pfam'):
-            pass
-            # no need as pfam is parsed separately as it has better info.
-            #self.Uniprot_pfam = [(xref['id'], xref['property'][0]['value']) for xref in clean_dict[''] if xref['type'] == 'Pfam']
-        elif elem.has_attr('type','GO'):
-            pass
-        elif elem.has_attr('type','PDB'):
-            chain = elem.get_sub_by_type('chains')
-            if chain is not None:  ## this is so unpredictable. It needs to be done by blast.
-                loca=chain.attrib['value'].split('=')[1].split('-')
-                self.pdbs.append({'description': elem.attrib['id'], 'id': elem.attrib['id'], 'x': loca[0], 'y': loca[1]})
-        elif elem.has_attr('type', 'Ensembl'):
-            self.ENST = elem.attrib['id']
-            for subelem in elem:
-                if subelem.is_tag('molecule'):
-                    if subelem.attrib['id'][-2:] != '-1':
-                        return None ## this is not the isoform 1 !!!
-                elif subelem.has_attr('type', 'protein sequence ID'):
-                    self.ENSP = subelem.attrib['value']
-                elif subelem.has_attr('type', 'gene ID'):
-                    self.ENSG = subelem.attrib['value']
-        else:
-            pass
-
-    @_failsafe
-    def _parse_protein_gene(self, elem):
-        for name_el in elem:
-            if name_el.is_tag('name'):
-                if name_el.has_attr('type', 'primary'):
-                    self.gene_name = name_el.text
-                elif name_el.has_attr('type', 'synonym'):
-                    self.alt_gene_name_list.append(name_el.text)
-        return self
-
-    @_failsafe
-    def _parse_protein_comment(self,elem):
-        if elem.has_attr('type','interaction') or elem.has_attr('type','subunit'):
-            for subelem in elem:
-                if subelem.is_tag('interactant'):
-                    partner = subelem.get_subtag('label')
-                    if partner is not None:
-                        self.partners['interactant'].append(partner.text)
-                elif subelem.is_tag('text'):  ## some entries are badly annotated and have only a text line..
-                    self.partners['interactant'].append(subelem.text)
-        elif elem.has_attr('type','disease'):
-            for subelem in elem:
-                if subelem.is_tag('disease'): #yes. the comment type=disease has a tag disease. wtf
-                    disease = {'id': subelem.attrib['id']}
-                    for key in ('description', 'name'):
-                        subsub = subelem.get_subtag(key)
-                        if subsub is not None:
-                            disease[key] = subsub.text
-                    mim = subelem.get_sub_by_type('MIM')
-                    if min:
-                        disease['MIM'] = mim.attrib['id']
-                    self.diseases.append(disease)
-
-    @_failsafe
-    def _parse_protein_feature(self,elem):
-        """ These are the possible feature types:
-        * active site
-        * binding site
-        * calcium-binding region
-        * chain
-        * coiled-coil region
-        * compositionally biased region
-        * cross-link
-        * disulfide bond
-        * DNA-binding region
-        * domain
-        * glycosylation site
-        * helix
-        * initiator methionine
-        * lipid moiety-binding region
-        * metal ion-binding site
-        * modified residue
-        * mutagenesis site
-        * non-consecutive residues
-        * non-terminal residue
-        * nucleotide phosphate-binding region
-        * peptide
-        * propeptide
-        * region of interest
-        * repeat
-        * non-standard amino acid
-        * sequence conflict
-        * sequence variant
-        * short sequence motif
-        * signal peptide
-        * site
-        * splice variant
-        * strand
-        * topological domain
-        * transit peptide
-        * transmembrane region
-        * turn
-        * unsure residue
-        * zinc finger region
-        * intramembrane region"""
-        if elem.attrib['type'] not in self.features:  ##avoiding defaultdictionary to avoid JSON issue.
-            self.features[elem.attrib['type']]=[]
-        locadex=self._get_location(elem)
-        if locadex:
-            self.features[elem.attrib['type']].append(self._get_location(elem))
-        return self
-
-
-
-    def _get_location(self, elem):
-        location = elem.get_subtag('location')
-        if location is None:
-            return None
-        position = location.get_subtag('position')
-        start = location.get_subtag('start')
-        end =  location.get_subtag('end')
-        if position is not None:  # single residue
-            x = position.attrib['position']
-            return {'x': x, 'y': x, 'description': elem.attrib['description'], 'id': '{t}_{s}'.format(s=x, t=elem.attrib['type'].replace(' ','').replace('-',''))}
-        elif start and end:  # region or disulfide
-            x = start.attrib['position']
-            y = end.attrib['position']
-            return {'x': x, 'y': y, 'description': elem.attr['description'], 'id': '{t}_{x}_{y}'.format(x=x, y=y, t=elem.attrib['type'].replace(' ', '').replace('-',''))}
-
-    def _parse_unicode_xml(self, entry):
-        """
-        loads the Protein instance with the data from the uniprot XML entry element.
-        Unlike the previous version the elemtn tree is parsed directly as opposed to converitng into a dictionary that seemed at first a wiser strategy but wasn't.
-        Do note htat the ET.Element has to be monkeypatched. See `help(ElementalExpansion)`
-        :param entry: the entry element of the XML parsed by Element Tree.
-        :return:
-        """
-        for elem in entry:
-            if elem.is_tag('accession'):
-                self.accession_list.append(elem.text.rstrip())
-            elif elem.is_tag('name'):
-                self.uniprot_name = elem.text.rstrip()
-            elif elem.is_tag('sequence'):
-                self.sequence = elem.text.rstrip()
-            elif elem.is_tag('protein'):
-                self._parse_protein_element(elem)
-            elif elem.is_tag('dbReference'):
-                self._parse_protein_dbReference(elem)
-            elif elem.is_tag('gene'):
-                self._parse_protein_gene(elem)
-            elif elem.is_tag('feature'):
-                self._parse_protein_feature(elem)
-            elif elem.is_tag('comment'):
-                self._parse_protein_comment(elem)
-            elif elem.is_tag('keyword'):
-                pass
-
     ############################# INIT #############################
-    def __init__(self, entry=None, gene_name='', uniprot_name = '', sequence='', **other):
+
+    def __init__(self, entry=None, gene_name='', uniprot = '', uniprot_name = '', sequence='', **other):
         ### predeclaration (and cheatsheet)
         self.xml = entry
         self.gene_name = gene_name
         self.uniprot_name = uniprot_name ## S39AD_HUMAN
         #### uniprot derivved
+        self.uniprot = uniprot
         self.alt_gene_name_list = []
         self.accession_list = [] ## Q96H72 etc.
         self.sequence = sequence  ###called seq in early version causing eror.rs
@@ -303,6 +130,8 @@ class Protein:
             return self
         else:
             return (self, threads)
+
+
 
     ############################# IO #############################
     def dump(self, file=None):
@@ -550,6 +379,77 @@ class Protein:
                 json.dump({db: list(self.partners[db]) for db in self.partners}, f)  # makes no difference downstream
         return self
 
+    @_failsafe
+    def query_ELM(self):
+        assert self.uniprot, 'No uniprot entry for ELM to parse...'
+        # Whole gene.
+        file = os.path.join(self.settings.ELM_folder, self.uniprot + '_ELM.tsv')
+        if os.path.isfile(file):
+            self.log('Reading ELM data from file')
+        else:
+            self._assert_fetchable('ELM')
+            req = requests.get('http://elm.eu.org/start_search/{id}.tsv'.format(id=self.uniprot))
+            self.log('Retrieving ELM data from web')
+            if req.status_code == 429:
+                warn('Too many ELM requests..')
+                time.sleep(60)
+                self.query_ELM()
+                return
+            elif req.status_code != 200:
+                raise ConnectionError(
+                    'Could not retrieve uniprot ID data from ELM (code {0}) for gene {1}'.format(req.status_code,
+                                                                                                 self.uniprot))
+            response = req.text
+            open(file, 'w').write(response)
+        data = list(csv.DictReader(open(file, 'r'), delimiter='\t'))
+        self.ELM = [(entry['start'],entry['stop'],entry['elm_identifier']) for entry in data if
+                    entry['is_filtered'] == 'FALSE' or entry['is_filtered'] == 'False']
+        # Variant
+        if self.mutation:
+            mfile = os.path.join(self.settings.ELM_variant_folder, self.uniprot + '_' + self.file_friendly_mutation + '_ELM_variant.tsv')
+            if os.path.isfile(mfile):
+                self.log('Reading ELM variant data from file')
+            else:
+                self._assert_fetchable('ELM (variant')
+                mseq = self.seq[0:self.resi - 1] + self.to_resn + self.seq[self.resi:]
+                mseq_trim = mseq[max(self.resi - 30, 0):min(self.resi + 30, len(self.seq))]
+                assert mseq_trim, 'Something went wrong in parsing {0}'.format(mseq)
+                req = requests.get('http://elm.eu.org/start_search/{}'.format(mseq_trim))
+                if req.status_code == 429:
+                    time.sleep(60)
+                    self.query_ELM()
+                    return
+                elif req.status_code != 200:
+                    raise ConnectionError('Could not retrieve data: ' + req.text)
+                response = req.text
+                self.log('Retrieving ELM variant data from web')
+                open(mfile, 'w').write(response)
+            mdata = list(csv.DictReader(open(mfile, 'r'), delimiter='\t'))
+            lbound = max(self.resi - 30, 0)
+            ubound = min(self.resi + 30, len(self.seq))
+            for entry in data:
+                if int(entry['start']) < self.resi < int(entry['stop']):
+                    for m in range(len(mdata)):
+                        mentry = mdata[m]
+                        if entry['elm_identifier'] == mentry['elm_identifier'] and int(entry['start']) == int(
+                                mentry['start']) + lbound:
+                            del mdata[m]
+                            self.mutational_effect.append(
+                                'Possible linear motif <a target="_blank" href="http://elm.eu.org/elms/{0}">{0} <i class="fas fa-external-link-square"></i></a> spanning mutation: preserved'.format(
+                                    entry['elm_identifier']))
+                            break
+                    else:
+                        self.mutational_effect.append(
+                            'Possible linear motif <a target="_blank" href="http://elm.eu.org/elms/{0}">{0} <i class="fas fa-external-link-square"></i></a> spanning mutation: lost'.format(
+                                entry['elm_identifier']))
+            if mdata:
+                for entry in mdata:
+                    if int(entry['start']) < 30 and int(entry['stop']) > 30:
+                        self.mutational_effect.append(
+                            'Possible new linear motif <a target="_blank" href="http://elm.eu.org/elms/{0}">{0} <i class="fas fa-external-link-square"></i></a> spanning mutation'.format(
+                                entry['elm_identifier']))
+
+
 
     def fetch_ENSP(self):
         """EMBL ids should vome from the Unirpto entry. However, in some cases too many it is absent."""
@@ -562,19 +462,192 @@ class Protein:
             warn('Unknown Ensembl protein id for ' + self.gene)
         return self
 
+
+    @_failsafe
+    def query_ELM(self):
+        assert self.uniprot, 'No uniprot entry for ELM to parse...'
+        # Whole gene.
+        file = os.path.join(self.settings.ELM_folder, self.uniprot + '_ELM.tsv')
+        if os.path.isfile(file):
+            self.log('Reading ELM data from file')
+        else:
+            self._assert_fetchable('ELM')
+            req = requests.get('http://elm.eu.org/start_search/{id}.tsv'.format(id=self.uniprot))
+            self.log('Retrieving ELM data from web')
+            if req.status_code == 429:
+                warn('Too many ELM requests..')
+                time.sleep(60)
+                self.query_ELM()
+                return
+            elif req.status_code != 200:
+                raise ConnectionError(
+                    'Could not retrieve uniprot ID data from ELM (code {0}) for gene {1}'.format(req.status_code,
+                                                                                                 self.uniprot))
+            response = req.text
+            open(file, 'w').write(response)
+        with open(file, 'r') as fh:
+            data = list(csv.DictReader(fh, delimiter='\t'))
+            self.ELM = [(entry['start'],entry['stop'],entry['elm_identifier']) for entry in data if
+                        entry['is_filtered'] == 'FALSE' or entry['is_filtered'] == 'False']
+        return self
+
+    @_failsafe
+    def get_pLI(self):
+        for line in csv.DictReader(self.settings.open('ExAC_pLI'), delimiter='\t'):
+            # transcript	gene	chr	n_exons	cds_start	cds_end	bp	mu_syn	mu_mis	mu_lof	n_syn	n_mis	n_lof	exp_syn	exp_mis	exp_lof	syn_z	mis_z	lof_z	pLI	pRec	pNull
+            if self.gene == line['gene']:
+                self.pLI = float(line['pLI'])  # intolerant of a single loss-of-function variant (like haploinsufficient genes, observed ~ 0.1*expected)
+                self.pRec = float(line['pRec'])  # intolerant of two loss-of-function variants (like recessive genes, observed ~ 0.5*expected)
+                self.pNull = float(line['pNull'])  # completely tolerant of loss-of-function variation (observed = expected)
+                break
+        else:
+            warn('Gene {} not found in ExAC table.'.format(self.gene))
+
+    @_failsafe
+    def get_ExAC(self):
+
+        def parse(line):
+            data = dict(zip(['CHROM', 'POS', 'ID', 'REF', 'ALT', 'QUAL', 'FILTER', 'INFO'], line.split('\t')))
+            # unpack info
+            info = {x.split('=')[0]: x.split('=')[1] for x in data['INFO'].split(';') if '=' in x}
+            del data['INFO']
+            # definitions were taken from the .vep.vcf
+            csq = dict(zip(
+                'Allele|Consequence|IMPACT|SYMBOL|Gene|Feature_type|Feature|BIOTYPE|EXON|INTRON|HGVSc|HGVSp|cDNA_position|CDS_position|Protein_position|Amino_acids|Codons|Existing_variation|ALLELE_NUM|DISTANCE|STRAND|FLAGS|VARIANT_CLASS|MINIMISED|SYMBOL_SOURCE|HGNC_ID|CANONICAL|TSL|APPRIS|CCDS|ENSP|SWISSPROT|TREMBL|UNIPARC|GENE_PHENO|SIFT|PolyPhen|DOMAINS|HGVS_OFFSET|GMAF|AFR_MAF|AMR_MAF|EAS_MAF|EUR_MAF|SAS_MAF|AA_MAF|EA_MAF|ExAC_MAF|ExAC_Adj_MAF|ExAC_AFR_MAF|ExAC_AMR_MAF|ExAC_EAS_MAF|ExAC_FIN_MAF|ExAC_NFE_MAF|ExAC_OTH_MAF|ExAC_SAS_MAF|CLIN_SIG|SOMATIC|PHENO|PUBMED|MOTIF_NAME|MOTIF_POS|HIGH_INF_POS|MOTIF_SCORE_CHANGE|LoF|LoF_filter|LoF_flags|LoF_info|context|ancestral'.split(
+                    '|'), info['CSQ'].split('|')))
+            del info['CSQ']
+            return {**data, **info, **csq}
+
+        if self.pLI == -1:  # No ExAC name so don't bother.
+            return
+        file = os.path.join(self.settings.ExAC_folder, self.uniprot + '_ExAC.vcf')
+        matches = []
+        if os.path.isfile(file):
+            self.log('Reading from cached _ExAC.vcf file')
+            matches = list(open(file))
+        else:
+            self.log('Parsing ExAC.r1.sites.vep.vcf')
+            # out.write('#CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO')
+            gmatch = '|{}|'.format(self.gene)
+            with self.settings.open('ExAC_vep') as fh:
+                for line in fh:
+                    if line and line[0] != '#' and gmatch in line:
+                        matches.append(line)
+                        # data = parse(line)
+            with open(file, 'w') as out:
+                out.writelines(matches)
+            self.log('... {} Matches found'.format(len(matches)))
+        # parse entries. Oddly some are incorrect if the gene happens to be potentially ambiguous.
+        parsed = [parse(line) for line in matches]
+        self.alleles = [x for x in parsed if x['SYMBOL'] == self.gene]
+        if self.alleles:
+            self.ENSG = self.alleles[0]['Gene']
+        verdict_list = [self.verify_allele(a) for a in self.iter_allele()]
+        verdict_sum = sum(verdict_list)
+        verdict_len = len(verdict_list)
+        if verdict_len and verdict_sum / verdict_len > 0.8:
+            self.log('ExAC data usable. There are {s} valid out of {l}'.format(s=verdict_sum, l=verdict_len))
+        else:
+            self.log('ExAC data cannot be integrated. There are {s} valid out of {l}'.format(s=verdict_sum, l=verdict_len))
+            self.alleles = []  # no ExAC.
+
+    def iter_allele(self, filter=True, consequence=None, split=True):
+        """
+        Generator that gives the allele...
+        :param filter: Bool. True (default) means only PASS records, False all.
+        :param consequence: Str. Optional filter. 'intron_variant', 'missense_variant', '5_prime_UTR_variant', 'synonymous_variant', 'splice_region_variant&intron_variant', '3_prime_UTR_variant', 'missense_variant&splice_region_variant', 'stop_gained', 'splice_region_variant&synonymous_variant', 'inframe_deletion', 'frameshift_variant', 'splice_region_variant&5_prime_UTR_variant', 'splice_acceptor_variant', 'splice_donor_variant'
+        :return: yields (resi as str but maybe range, X/Y)
+        """
+        for allele in self.alleles:
+            if allele['HGVSp']:  # ['HGVSp']
+                if filter:
+                    if allele['FILTER'] != 'PASS':
+                        continue
+                if consequence:
+                    if allele['Consequence'] != consequence and allele['Consequence'] not in consequence:
+                        continue  # 'Protein_position': '', 'Amino_acids'
+                elif allele['Consequence'] in ('synonymous_variant', 'splice_region_variant&synonymous_variant'):
+                    continue
+                else:
+                    pass  # It is fine.
+                if split:
+                    yield (allele['Protein_position'], allele['Amino_acids'])
+                else:
+                    yield allele['HGVSp'].split(':')[-1]
+
+    def verify_allele(self, allele):
+        s = allele[0].split('-')[0]
+        if not s.isdigit():
+            return False
+        i = int(s)
+        # There is the problem that some ExAC entries do not match.
+        if i > len(self.seq):
+            return False
+        elif self.seq[i - 1] == allele[1].split('/')[0]:
+            return True
+        else:
+            return False
+
+    # @_failsafe
+    def add_manual_data(self):
+        man = {x['Gene']: x for x in csv.DictReader(open(os.path.join(self.settings.manual_folder, 'manual.csv')))}
+        ### PDB
+        pdb_candidate = os.path.join(self.settings.manual_folder, self.uniprot + '.pdb')
+        if os.path.isfile(pdb_candidate):
+            pdb_man_file = pdb_candidate
+        elif self.uniprot in man and man[self.uniprot]['PDB']:
+            pdb_candidate = os.path.join(self.settings.manual_folder, man[self.uniprot]['PDB'].lstrip().rstrip())
+            if os.path.isfile(pdb_candidate):
+                pdb_man_file = pdb_candidate
+            else:  # csv is wrong
+                pdb_man_file = None
+                warn('Cannot find structure file, claimed by manual.csv: '+pdb_candidate)
+        else:
+            pdb_man_file = None
+        if pdb_man_file:
+            self.pdb_file = os.path.join(self.settings.page_folder, self.uniprot + '.pdb')
+            self.pdb_resi = 0  # self.resi - int(man[self.gene]['PDB_offset'])
+            if not os.path.isfile(self.pdb_file):  # make the html copy
+                copyfile(pdb_man_file, self.pdb_file)
+        ### MD
+        txt_candidate = os.path.join(self.settings.manual_folder, self.uniprot + '.md')
+        if os.path.isfile(txt_candidate):
+            txt = txt_candidate
+        elif self.gene in man and man[self.uniprot]['Text']:
+            txt_candidate = os.path.join(self.settings.manual_folder, man[self.uniprot]['Text'])
+            if os.path.isfile(txt_candidate):
+                txt = txt_candidate
+            else:
+                warn('Cannot find text file, ' + txt_candidate + ' claimed by manual.csv.')
+                txt = None
+        else:
+            txt = None
+        if txt:
+            self.user_text = markdown.markdown(open(txt).read())
+        # log
+        if self.user_text and self.pdb_file:
+            self.log('Manual data added.')
+        elif self.user_text and not self.pdb_file:
+            self.log('Manual data. No structure.')
+        else:  # this is unnedded except for legacy pickled files.
+            self.user_text = ''
+            self.pdb_file = ''
+        # done
+        return self
+
     def parse_all(self, mode='parallel'):
         """
-        Gets all the data.
-        :param mode: parallel | backgroud (=parallel but not complete) | serial (or anythign)
+        Gets all the data. if running in parallel see self._threads list.
+        :param mode: parallel | backgroud (=parallel but not complete) | serial (or anything else)
         :return:
         """
-        tasks = {'Uniprot': self.parse_uniprot,
-                 'PFam': self.parse_pfam,
+        tasks = {'Uniprot': self.parse_uniprot, #done.
+                 'PFam': self.parse_pfam, #done.
                  'ELM': self.query_ELM,
                  'pLI': self.get_pLI,
                  'ExAC': self.get_ExAC,
                  'manual': self.add_manual_data,
-                 'GO terms': self.fetch_go,
+                 #'GO terms': self.fetch_go,
                  'Binding partners': self.fetch_binders}
         if mode in ('parallel','background'):
             threads = {}
@@ -627,107 +700,11 @@ class Protein:
         return self
 
 
-    ## depraction
+    ## depraction zone.
     def write(self, file=None):
         raise Exception('DEPRACATED. use write_uniprot')
 
-
-
-import unittest, json, csv
-
-
-
-class TestProtein(unittest.TestCase):
-
-    def test_warn(self):
-        print('Two userwarnings coming up')
-        Protein.settings.verbose = True
-        irak = Protein()
-        with self.assertWarns(UserWarning) as cm:
-            foo = irak.foo
-        with self.assertWarns(UserWarning) as cm:
-            irak.other['bar'] = 'bar'
-            self.assertEqual(irak.bar, 'bar')
-
-
-    def test_parse(self):
-        print('testing parsing')
-        irak = Protein()
-        irak.uniprot = 'Q9NWZ3'
-        irak.gene = 'IRAK4'
-        irak.parse_uniprot()
-        self.assertEqual(irak.sequence[0], 'M')
-
-    def test_full_parse(self):
-        return 1
-        print('testing serial parsing')
-        irak = Protein(uniprot = 'Q9NWZ3', gene = 'IRAK4')
-        irak.parse_all(mode='serial')
-
-    def test_extend(self):
-        print('testing extended')
-        with open('data/human_prot_namedex.json') as f:
-            namedex = json.load(f)
-
-        def get_friend(name):
-            print(name)
-            try:
-                friend = Protein(uniprot=namedex[name], gene=name)
-                friend.parse_uniprot()
-                friend.parse_pLI()
-                #friend.fetch_binders()
-                return friend
-            except Exception as err:
-                print(err)
-                return None
-
-        dock = get_friend('DOCK11')
-        dock.fetch_binders()
-        print(dock.partners)
-        with open('Dock11_test.csv','w',newline='') as fh:
-            sheet = csv.DictWriter(fh, fieldnames='name uniprot uniprot_name group disease pLI pRec pNull'.split())
-            sheet.writeheader()
-            friends=set([f for l in dock.partners.values() for f in l])
-            for friend in friends:
-                groups = [g for g in dock.partners.keys() if friend in dock.partners[g]]
-                fprot = get_friend(friend)
-                if fprot:
-                    sheet.writerow({'name': friend,
-                                    'uniprot': fprot.uniprot,
-                                    'uniprot_name': fprot.uniprot_name,
-                                    'group': ' | '.join(groups),
-                                    'disease': ' | '.join([d['name'] for d in fprot.diseases]),
-                                    'pLI': fprot.pLI,
-                                    'pRec': fprot.pRec,
-                                    'pNull': fprot.pNull
-                    })
-                else:
-                    sheet.writerow({'name': friend})
-
-
-if __name__ == '__main__':
-    print('*****Test********')
-
-    unittest.main()
-    #irak.parse_uniprot()
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+    @_failsafe
+    def _test_failsafe(self):
+        raise ValueError('Will failsafe catch it? ({})'.format(self.settings.error_tollerant))
 
