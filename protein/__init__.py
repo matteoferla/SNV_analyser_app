@@ -708,3 +708,74 @@ class Protein(_UniprotMixin):
     def _test_failsafe(self):
         raise ValueError('Will failsafe catch it? ({})'.format(self.settings.error_tollerant))
 
+    def check_mutation(self, mutation):
+        if len(self.sequence) > mutation.residue and self.sequence[mutation.resi - 1] == mutation.from_resn:
+            return True
+        else:
+            return False
+
+class Mutation:
+    """
+    Moved out of Protein.
+    """
+    def __init__(self, mutation=None):
+        self.from_residue = ''
+        self.to_residue = ''
+        self.residue_index = 0
+        if mutation:
+            self.parse_mutation(mutation)
+
+    #raise NotImplementedError('Under upgrade')
+    def parse_mutation(self, mutation):
+        assert mutation.find('.c') == -1, 'Chromosome mutation not accepted. Use Proetien.'
+        # remove the p.
+        mutation = mutation.replace('p.', '').replace('P.', '')
+        for (single, triple) in (
+                ('A', 'Ala'), ('B', 'Asx'), ('C', 'Cys'), ('D', 'Asp'), ('E', 'Glu'), ('F', 'Phe'), ('G', 'Gly'),
+                ('H', 'His'),
+                ('I', 'Ile'), ('K', 'Lys'), ('L', 'Leu'), ('M', 'Met'), ('N', 'Asn'), ('P', 'Pro'), ('Q', 'Gln'),
+                ('R', 'Arg'),
+                ('S', 'Ser'), ('T', 'Thr'), ('V', 'Val'), ('W', 'Trp'), ('X', 'Xaa'), ('Y', 'Tyr'), ('Z', 'Glx')):
+            self.mutation = self.mutation.replace(triple, single)
+        if self.mutation.find('fs') != -1 or self.mutation.find('*') != -1:
+            rex = re.match('(\w)(\d+)', self.mutation)
+            if rex:
+                self.from_resn = rex.group(1)
+                self.resi = int(rex.group(2))
+                self.to_resn = '*'
+                self.file_friendly_mutation = self.from_resn + str(self.resi) + 'stop'
+                self.clean_mutation = self.from_resn + str(self.resi) + '*'
+            else:
+                raise ValueError('odd mutation of type fs' + self.mutation)
+        elif self.mutation.find('del') != -1 or self.mutation.find('\N{GREEK CAPITAL LETTER DELTA}') != -1:
+            self.mutation = self.mutation.replace('\N{GREEK CAPITAL LETTER DELTA}',
+                                                  'del')  # would love the other way round but unicode in 2018 still crashes stuff...
+            rex = re.match('del(\w)(\d+)', self.mutation)
+            if not rex:
+                rex = re.match('(\w)(\d+)del', self.mutation)
+            if rex:
+                self.from_resn = rex.group(1)
+                self.resi = int(rex.group(2))
+                self.to_resn = rex.group(1)  # technically not but shush...
+                self.file_friendly_mutation = 'del' + self.from_resn + str(self.resi)
+                self.clean_mutation = 'del' + self.from_resn + str(self.resi)
+                warn('Mutation parsing: Deletions are not handled correctly atm...')
+                self.log('Residue deletion is not handled correctly at the moment...')
+            else:
+                raise ValueError('odd mutation of type deletion' + self.mutation)
+        else:
+            rex = re.match('(\w)(\d+)(\w)', self.mutation)
+            if rex:
+                assert rex.group(1) in 'QWERTYIPASDFGHKLCVNM*', 'The from mutant is not a valid amino acid'
+                assert rex.group(3) in 'QWERTYIPASDFGHKLCVNM*', 'The to mutant is not a valid amino acid'
+                self.from_resn = rex.group(1)
+                self.resi = int(rex.group(2))
+                self.to_resn = rex.group(3)
+                self.file_friendly_mutation = self.from_resn + str(self.resi) + self.to_resn
+                self.clean_mutation = self.from_resn + str(self.resi) + self.to_resn
+                self.blossum_score = self.blossum[self.from_resn][self.to_resn]
+            else:
+                raise ValueError(self.mutation + ' is an odd_mutation')
+        return self
+
+        # todo. Finish. Parse shit input. say three-letter or full word code.

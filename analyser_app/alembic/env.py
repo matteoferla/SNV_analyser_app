@@ -3,6 +3,7 @@ from alembic import context
 from pyramid.paster import get_appsettings, setup_logging
 from sqlalchemy import engine_from_config
 
+## convensions
 from analyser_app.models.meta import Base
 
 config = context.config

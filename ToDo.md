@@ -9,6 +9,8 @@
 
 &#10005; Card to show predicted effect. And show all the data if requested. Such as sequence.
 
+&#10005; Train on known variants. How do I parse verbose human text? Keyword mining?
+
 ## Moving to Protein()
 &#10003; Parallelise.
 

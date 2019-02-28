@@ -14,8 +14,10 @@ Whereas it is true that Thread names can be assigned, the importance is their un
 """
 
 from pyramid.view import view_config
-from Tracker_analyser import Variant
-Variant.from_pickle = False
+#from Tracker_analyser import Variant
+#Variant.from_pickle = False
+
+from protein import Protein, Mutation
 
 from mako.template import Template
 from mako.lookup import TemplateLookup
@@ -61,13 +63,13 @@ def mut_check_view(request):
     :return:
     """
     try:
-        variant=Variant()
-        seq = seqdex[request.session['uniprot']]
-        variant.parse_mutation(request.POST['mutation'])
-        if variant._check_sequence(seq):
+        variant=Protein()
+        variant.sequence = seqdex[request.session['uniprot']]
+        mutation = Mutation(request.POST['mutation'])
+        if variant.check_mutation(mutation):
             return {'valid': 1}
         else:
-            return {'error': variant.msg_error_sequence(seq)}
+            return {'error': variant.msg_error_sequence(variant.sequence)}
     except Exception as err:
         return {'error': str(err)}
 
@@ -84,6 +86,15 @@ def status_check_view(request):
 
 @view_config(route_name='get_results', renderer="../templates/results.mako") # default mako renderer giving me problems.
 def get_results_view(request):
+    variant = Variant.load('data/pickle/'+request.session['uniprot']+'.p')
+    variant.parse_mutation(request.POST['mutation']) ## added here like this to avoid it getting saved.
+    variant.predict_effect()
+    return {'variant': variant}
+
+
+############################ DEPRACATION IN PROGTRSS
+#@view_config(route_name='get_results', renderer="../templates/results.mako") # default mako renderer giving me problems.
+def old_get_results_view(request):
     variant = Variant.load('data/pickle/'+request.session['uniprot']+'.p')
     variant.parse_mutation(request.POST['mutation']) ## added here like this to avoid it getting saved.
     variant.predict_effect()
