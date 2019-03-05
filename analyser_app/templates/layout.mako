@@ -3,7 +3,9 @@
 <%page args="request, bootstrap='regular', cdn='home', needs_tour=False, needs_feat=False, needs_plotly=False, needs_ngl=False, needs_clip=False"/>
 ## bootstrap: regular 4|materials (BDM)
 ## cdn: local|remote|home
-
+<%
+    needs_tour = False #Uncaught TypeError: No method named "destroy"
+%>
 <head>
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
@@ -85,7 +87,8 @@
 
 ############ BS
 <script src="https://code.jquery.com/jquery-3.3.1.min.js" integrity="sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8=" crossorigin="anonymous"></script>
-<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.bundle.min.js" integrity="sha384-xrRywqdh3PHs8keKZN+8zzc5TX0GRTLCcmivcbNJWm2rs5C8PRhcEn3czEjhAO9o" crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js" integrity="sha384-UO2eT0CpHqdSJQ6hJty5KVphtPhzWj9WO1clHTMGa3JDZwrnQq4sF86dIHNDz0W1" crossorigin="anonymous"></script>
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js" integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM" crossorigin="anonymous"></script>
 % if bootstrap == 'materials':
     <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mdbootstrap/4.6.1/js/mdb.min.js"></script>
 % endif
@@ -100,6 +103,7 @@
     % else: ## local
         <script src="ngl/dist/ngl.js" type="text/javascript"></script>
     % endif
+    <script src="${request.static_url('analyser_app:static/ngl.extended.js')}" type="text/javascript"></script>
 % endif
 
 % if needs_clip:  ## no CDN issue.
@@ -115,7 +119,7 @@
     <script src="https://www.matteoferla.com//feature-viewer/dist/feature-viewer.min.js" type="text/javascript"></script>
 % endif
 
-% if needs_tour and 1==0:   ## no CDN issue.
+% if needs_tour:   ## no CDN issue.
      <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-tour/0.11.0/js/bootstrap-tour.min.js"></script>
 % endif
 

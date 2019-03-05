@@ -34,7 +34,8 @@ class _UniprotMixin(_BaseMixin):
             chain = elem.get_sub_by_type('chains')
             if chain is not None:  ## this is so unpredictable. It needs to be done by blast.
                 loca=chain.attrib['value'].split('=')[1].split('-')
-                self.pdbs.append({'description': elem.attrib['id'], 'id': elem.attrib['id'], 'x': loca[0], 'y': loca[1]})
+                chainid=chain.attrib['value'].split('=')[0].split('/')[0]
+                self.pdbs.append({'description': elem.attrib['id'], 'id': elem.attrib['id']+'_'+chainid, 'x': loca[0], 'y': loca[1]})
         elif elem.has_attr('type', 'Ensembl'):
             self.ENST = elem.attrib['id']
             for subelem in elem:
@@ -128,6 +129,9 @@ class _UniprotMixin(_BaseMixin):
         locadex=self._get_location(elem)
         if locadex:
             self.features[elem.attrib['type']].append(self._get_location(elem))
+        else:
+            print('no location?')
+            print(elem.attrib)
         return self
 
     def _get_location(self, elem):
@@ -136,14 +140,24 @@ class _UniprotMixin(_BaseMixin):
             return None
         position = location.get_subtag('position')
         start = location.get_subtag('start')
+        if start is None:
+            start = location.get_subtag('begin')
         end =  location.get_subtag('end')
+        if elem.has_attr('description'):
+            description = elem.attrib['description']
+        else:
+            description = '-'
         if position is not None:  # single residue
             x = position.attrib['position']
-            return {'x': x, 'y': x, 'description': elem.attrib['description'], 'id': '{t}_{s}'.format(s=x, t=elem.attrib['type'].replace(' ','').replace('-',''))}
-        elif start and end:  # region or disulfide
+            return {'x':int(x), 'y': int(x), 'description': description, 'id': '{t}_{s}'.format(s=x, t=elem.attrib['type'].replace(' ','').replace('-',''))}
+        elif start is not None and end is not None:  # region or disulfide
             x = start.attrib['position']
             y = end.attrib['position']
-            return {'x': x, 'y': y, 'description': elem.attr['description'], 'id': '{t}_{x}_{y}'.format(x=x, y=y, t=elem.attrib['type'].replace(' ', '').replace('-',''))}
+            return {'x': int(x), 'y': int(y), 'description': description, 'id': '{t}_{x}_{y}'.format(x=x, y=y, t=elem.attrib['type'].replace(' ', '').replace('-',''))}
+        else:
+            print('Unexpected location entry')
+            print(elem.attrib, position, start, end)
+            return None
 
     def _parse_unicode_xml(self, entry):
         """

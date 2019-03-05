@@ -2,7 +2,11 @@
 // feature
 //fix d3 version issue.
 //d3.scale={linear: d3.scaleLinear};
-window.ft = new FeatureViewer('${variant.seq}',
+<%
+    print(protein.features)
+    print(protein.features.keys())
+%>
+window.ft = new FeatureViewer('${protein.sequence}',
            '#fv',
             {
                 showAxis: true,
@@ -13,54 +17,32 @@ window.ft = new FeatureViewer('${variant.seq}',
                 zoomMax:50 //define the maximum range of the zoom
             });
 
-<%
-    domains=str([{
-            'x': domain['location']['start'],
-            'y': domain['location']['end'],
-            'id': 'domain_{s}_{e}'.format(s=domain['location']['start'],e=domain['location']['end']),
-            'description': domain['id']+' '+domain['accession']}
-        for domain in variant.pfam])
-
-    gnomad=str([{
-            'x': int(allele[0].split("-")[0]),
-            'y': int(allele[0].split("-")[0]),
-            'id': 'variant_{s}'.format(s=allele[0].split("-")[0]),
-            'description': allele[1][0]+allele[0]+allele[1][-1]}
-        for allele in variant.iter_allele() if allele[0].split("-")[0].isdigit()])
-
-    modified=str([{
-            'x': resi,
-            'y': resi,
-            'id': 'modified_{s}'.format(s=resi),
-            'description': resn} for resi, resn in variant.modified_residues])
-
-    our=str([{'x': variant.resi,
-            'y': variant.resi,
-            'id': 'modified_{s}'.format(s=variant.resi),
-            'description': variant.mutation}])
-
-    elm=str([{
-        'x': motif[0],
-        'y': motif[1],
-        'id': 'modified_{s}_{e}'.format(s=motif[0],e=motif[1]),
-        'description': motif[2]} for motif in variant.ELM])
-
-%>
-
-% if our:
-    ft.addFeature({
-        data: ${our|n},
+%if protein.mutation is not None:
+	ft.addFeature({
+        data: [{'x':${protein.mutation.residue_index},'y': ${protein.mutation.residue_index}, 'id': 'our_${protein.mutation.residue_index}', 'description': 'p.${str(protein.mutation)}'}],
         name: "Candidate SNP",
         className: "our_SNP",
         color: "indianred",
         type: "unique",
         filter: "Variant"
     });
-% endif
+%endif
 
-%if domains:
+			
+%if protein.pdbs:
     ft.addFeature({
-        data: ${domains|n},
+        data: ${str(protein.pdbs)|n},
+        name: "Crystal structures",
+        className: "pdb",
+        color: "lime",
+        type: "rect",
+        filter: "Domain"
+    });
+%endif
+
+%if 'domain' in protein.features:
+    ft.addFeature({
+        data: ${str(protein.features['domain'])|n},
         name: "Domain",
         className: "domain",
         color: "lightblue",
@@ -69,48 +51,117 @@ window.ft = new FeatureViewer('${variant.seq}',
     });
 %endif
 
-% if gnomad:
+<%
+    combo=[]
+    for key in ('transmembrane region','intramembrane region','region of interest','peptide','site','active site','binding site','calcium-binding region','zinc finger region','metal ion-binding site','DNA-binding region','lipid moiety-binding region', 'nucleotide phosphate-binding region'):
+        if key in protein.features:
+            combo.extend(protein.features[key])
+%>
+%if combo:
     ft.addFeature({
-        data: ${gnomad|n},
-        name: "gNOMAD",
-        className: "variant",
-        color: "lightblue",
-        type: "unique",
-        filter: "gNOMAD"
+        data: ${str(combo)|n},
+        name: "region of interest",
+        className: "domain",
+        color: "teal",
+        type: "rect",
+        filter: "Domain"
     });
-% endif
+%endif
 
-% if modified:
+<%
+    combo=[]
+    for key in ('propeptide','signal peptide','repeat','coiled-coil region','compositionally biased region','short sequence motif','topological domain','transit peptide'):
+        if key in protein.features:
+            combo.extend(protein.features[key])
+    print(combo)
+%>
+%if combo:
     ft.addFeature({
-        data: ${modified|n},
+        data: ${str(combo)|n},
+        name: "other regions",
+        className: "domain",
+        color: "lavender",
+        type: "rect",
+        filter: "Domain"
+    });
+%endif
+
+<%
+    combo=[]
+    for key in ('initiator methionine','modified residue','glycosylation site','non-standard amino acid'):
+        if key in protein.features:
+            combo.extend(protein.features[key])
+%>
+%if combo:
+    ft.addFeature({
+        data: ${str(combo)|n},
         name: "Modified residues",
         className: "modified",
         color: "slateblue",
         type: "unique",
         filter: "Modified"
     });
-% endif
+%endif
 
-% if elm:
+<%
+    combo=[]
+    for key in ('helix', 'turn', 'strand'):
+        if key in protein.features:
+            combo.extend(protein.features[key])
+%>
+%if combo:
     ft.addFeature({
-        data: ${elm|n},
-        name: "Motif prediction",
-        className: "elm",
-        color: "lavender",
-        type: "rect",
-        filter: "ELM"
+        data: ${str(combo)|n},
+        name: "Secondary structure",
+        className: "domain",
+        color: "olive",
+        type: "rectangle",
+        filter: "Domain"
     });
-% endif
+%endif
 
 
 
-$('.domain,.elm').each(function () {
+%if 'sequence variant' in protein.features:
+    ft.addFeature({
+        data: ${str(protein.features['sequence variant'])|n},
+        name: "seq. variant",
+        className: "modified",
+        color: "firebrick",
+        type: "unique",
+        filter: "Modified"
+    });
+%endif
+
+%if 'disulfide bond' in protein.features:
+    ft.addFeature({
+        data: ${str(protein.features['disulfide bond'])|n},
+        name: "disulfide bond",
+        className: "dsB",
+        color: "orange",
+        type: "path",
+        filter: "Modified Residue"
+    });
+%endif
+
+%if 'cross-link' in protein.features:
+    ft.addFeature({
+        data: ${str(protein.features['cross-link'])|n},
+        name: "disulfide bond",
+        className: "dsB",
+        color: "orange",
+        type: "path",
+        filter: "Modified Residue"
+    });
+%endif
+
+$('.domain,.dsB').each(function () {
         var id = $(this)[0].id;
         var ab = id.split('_')[1];
         var ad = id.split('_')[2];
         $(this).css('cursor', 'pointer');
         $(this).click(function () {
-            show_region(ab, ad);
+            NGL.specialOps.show_domain('viewport', ab+'-'+ad+':'+ops.current_chain);
         });
     });
 
@@ -118,97 +169,28 @@ $('.domain,.elm').each(function () {
 
 $('.variant,.modified,.our_SNP').each(function () {
         var id = $(this)[0].id;
-        var ab = id.split('_')[1];
+        var ab = id.split('_')[1] + ops.current_chain;
         $(this).css('cursor', 'pointer');
         $(this).click(function () {
-            show_residue(ab);
+            NGL.specialOps.show_residue('viewport', ab+':'+ops.current_chain);
         });
     });
 
-//$('.header-help').removeAttr('type'); //fix help formatting.
-$('.svgHeader').append(`<div class="btn-group">
-  <label class="btn btn-secondary active fake-checkbox" checked id='gNOMAD_checkbox'> gNOMAD</label>
-  <label class="btn btn-secondary active fake-checkbox" checked id='ELM_checkbox'> ELM</label>
-</div>`);
-
-$('.fake-checkbox[checked]').prop("checked",true); // not sure why checked does nothing. its an attribute not a prop unless it's a real checkbox?
-$('.fake-checkbox').click(function () {
-    $(this).prop("checked", ! $(this).prop("checked"));
-    if ($(this).prop("checked") == true) {
-        $(this).addClass('btn-secondary');
-        $(this).addClass('active');
-        $(this).removeClass('btn-light');
-    } else {
-        $(this).addClass('btn-light');
-        $(this).removeClass('btn-secondary');
-        $(this).removeClass('active');
-    }
-});
-
-$('#gNOMAD_checkbox').click(function () {
-    if ($(this).prop("checked") == true) {
-        $('.variant').hide(); $('.linevariant').hide();
-    } else {$('.variant').show(); $('.linevariant').show();}
-});
-
-$('#ELM_checkbox').click(function () {
-    if ($(this).prop("checked") == true) {
-        $('.elm').hide(); $('.lineelm').hide();
-    } else {$('.elm').show(); $('.lineelm').show();}
-});
-
-
-
-
-
-function show_mutant(obj) {
-        % if variant.pdb_chain:
-            var resi=':${variant.pdb_chain} and '+(${variant.resi}).toString();
-        % else:
-            var resi=(${variant.resi}).toString();
-        % endif
-        show_residue(resi, obj);
-    }
-
-function show_region(ab,ad, protein) {
-    protein = (typeof protein === 'undefined') ? stage.compList[0] : protein;
-    protein.removeAllRepresentations();
-    var schemeId = NGL.ColormakerRegistry.addSelectionScheme([["green", ab.toString()+'-'+ad.toString()],["white", "*"]]);
-    protein.addRepresentation( "cartoon", {color: schemeId });
-    protein.autoView();
-}
-
-function show_residue(resi, protein) {
-    protein = (typeof protein === 'undefined') ? stage.compList[0] : protein;
-    var selection = new NGL.Selection( resi );
-    var schemeId = NGL.ColormakerRegistry.addSelectionScheme([
-        ["lightblue",'_C'],["blue",'_N'],["red",'_O'],["white",'_H'],["yellow",'_S'],["orange","*"]
-    ]);
-    var radius = 5;
-    var atomSet = protein.structure.getAtomSetWithinSelection( selection, radius );
-    // expand selection to complete groups
-    var atomSet2 = protein.structure.getAtomSetWithinGroup( atomSet );
-    protein.addRepresentation( "licorice", { sele: atomSet2.toSeleString()} );
-    protein.addRepresentation( "hyperball", { sele: resi, color: schemeId} );
-    protein.addRepresentation( "cartoon" );
-    % if variant.has_allele_pdb_file:
-        protein.addRepresentation( "licorice", { sele: alleles.string} );
-    % endif
-    window.zoom=atomSet2.toSeleString();
-    protein.autoView(window.zoom);
-}
-
 //structure
-% if variant.pdb_file or variant.pdb_code:
+% if protein.pdbs:
     var stage = new NGL.Stage( "viewport",{backgroundColor: "white"});
     window.stage = stage;
-    stage.setParameters({backgroundColor: "white"});
     window.addEventListener( "resize", function( event ){stage.handleResize();}, false );
+    stage.loadFile( "rcsb://${protein.pdbs[0]['description'].lower()}", { defaultRepresentation: true } );//.then(function (o) {show_mutant(o);window.pdb=o});
+    NGL.stageIds['viewport'] = stage;
+    ops.current_chain = '${protein.pdbs[0]['id'].split('_')[1]}';
 % endif
-% if variant.pdb_file: ##okay, this is problematic and should be coded differently...
-    ### todo get ${home} to work...
-    stage.loadFile( "${variant.gene}.pdb", { defaultRepresentation: true } ).then(function (o) {show_mutant(o);window.pdb=o});
-% elif variant.pdb_code:
-    stage.loadFile( "rcsb://${variant.pdb_code}", { defaultRepresentation: true } ).then(function (o) {show_mutant(o);window.pdb=o});
-% endif
+
+
+$('#new_analysis').click(function () {
+    $('#retrieval_card').show(1000);
+    $('#input_card').show(1000);
+    $('#results').detach();
+});
+
 </script>

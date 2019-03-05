@@ -5,7 +5,7 @@
 
 &#10003; concurrent Progress ajax. Implemented incorrectly: currently one ajax asks if the protein exists and if it does returns but also kicks off a parallel task. The checker ajax loops until the tasks are doen.
 
-&#10005; The backend is diabolically messy. Fix ajax to send a data check. On success send a long timeout request that does the hardwork and in parallel send quick status update ajax loop. _I.e._ have two concurrent ajaxes (ajaces? ajantes (aἴᾰντες)? oh, it's dual so ajante/aἴᾰντε). The longer ajax means that the Session does not hold thread names that need to be awkwardly retrieved and the instance isn't JSON serialised.
+&#10005; The backend is diabolically messy. Fix ajax to send a data check. On success send a long timeout request that does the hardwork and in parallel send quick status update ajax loop. _I.e._ have two concurrent ajax requests. The longer ajax means that the Session does not hold thread names that need to be awkwardly retrieved and the instance isn't JSON serialised.
 
 &#10005; Card to show predicted effect. And show all the data if requested. Such as sequence.
 

@@ -19,6 +19,8 @@ import requests  # for xml fetcher.
 
 from protein.ET_monkeypatch import ET #monkeypatched version
 from protein.settings_handler import global_settings
+from Bio.Blast import NCBIWWW
+from Bio.Blast import NCBIXML
 
 from protein._protein_uniprot_mixin import _UniprotMixin
 # Protein inherits _UniprotMixin, which in turn inherits _BaseMixin
@@ -66,7 +68,7 @@ class Protein(_UniprotMixin):
         self.gene_name = gene_name
         self.uniprot_name = uniprot_name ## S39AD_HUMAN
         #### uniprot derivved
-        self.uniprot = uniprot
+        self.uniprot = uniprot ## uniprot accession
         self.alt_gene_name_list = []
         self.accession_list = [] ## Q96H72 etc.
         self.sequence = sequence  ###called seq in early version causing eror.rs
@@ -89,6 +91,12 @@ class Protein(_UniprotMixin):
         self.pLI = -1
         self.pRec = -1
         self.pNull = -1
+        ### pdb
+        self.pdb_matches =[] #{'match': align.title[0:50], 'match_score': hsp.score, 'match_start': hsp.query_start, 'match_length': hsp.align_length, 'match_identity': hsp.identities / hsp.align_length}
+        ### other ###
+        self.user_text = ''
+        ### mutation ###
+        self.mutation = None
         ### junk
         self.other = other ### this is a garbage bin. But a handy one.
         self.logbook = [] # debug purposes only. See self.log()
@@ -97,46 +105,19 @@ class Protein(_UniprotMixin):
         if entry:
             self._parse_uniprot_xml(entry)
 
-    def parallel_parse_protein(self, uniprot, gene_name, return_complete=True):
-        """
-        A parallel version of the protein fetcher.
-        It deals with the non-mutation parts of the Variant.
-        oNly `.uniprot` and `.gene` attributes are needed.
-        :param uniprot:
-        :param gene_name:
-        :param return_complete: a boolean flag that either returns the threads if False, or waits for the threads to complete if true.
-        :return:
-        """
-        self.settings.verbose = False  # for now.
-        self.from_pickle = False
-        self.uniprot = uniprot
-        self.gene = gene_name  # gene_name
-        tasks = {'Uniprot': self.parse_uniprot,
-                 'PFam': self.parse_pfam,
-                 'ELM': self.query_ELM,
-                 'pLI': self.get_pLI,
-                 'ExAC': self.get_ExAC,
-                 'manual': self.add_manual_data,
-                 'GO terms': self.fetch_go,
-                 'Binding partners': self.fetch_binders}
-        threads = {}
-        for k, fn in tasks.items():
-            t = threading.Thread(target=fn)
-            t.start()
-            threads[k] = t
-        if return_complete:
-            for tn, t in threads.items():
-                t.join()
-            return self
-        else:
-            return (self, threads)
-
+    def complete(self):
+        for k in self._threads:
+            if self._threads[k] and self._threads[k].is_alive():
+                self._threads[k].join()
+        self._threads = {}
+        return self
 
 
     ############################# IO #############################
     def dump(self, file=None):
         if not file:
             file = os.path.join(self.settings.pickle_folder, '{0}.p'.format(self.uniprot_name))
+        self.complete() # wait complete.
         pickle.dump(self.__dict__, open(file, 'wb'))
         self.log('Data saved to {} as pickled dictionary'.format(file))
 
@@ -404,52 +385,53 @@ class Protein(_UniprotMixin):
         data = list(csv.DictReader(open(file, 'r'), delimiter='\t'))
         self.ELM = [(entry['start'],entry['stop'],entry['elm_identifier']) for entry in data if
                     entry['is_filtered'] == 'FALSE' or entry['is_filtered'] == 'False']
+
+    def query_ELM_for_mutant(self):
+        raise NotImplementedError
+        #todo implement better.
         # Variant
-        if self.mutation:
-            mfile = os.path.join(self.settings.ELM_variant_folder, self.uniprot + '_' + self.file_friendly_mutation + '_ELM_variant.tsv')
-            if os.path.isfile(mfile):
-                self.log('Reading ELM variant data from file')
-            else:
-                self._assert_fetchable('ELM (variant')
-                mseq = self.seq[0:self.resi - 1] + self.to_resn + self.seq[self.resi:]
-                mseq_trim = mseq[max(self.resi - 30, 0):min(self.resi + 30, len(self.seq))]
-                assert mseq_trim, 'Something went wrong in parsing {0}'.format(mseq)
-                req = requests.get('http://elm.eu.org/start_search/{}'.format(mseq_trim))
-                if req.status_code == 429:
-                    time.sleep(60)
-                    self.query_ELM()
-                    return
-                elif req.status_code != 200:
-                    raise ConnectionError('Could not retrieve data: ' + req.text)
-                response = req.text
-                self.log('Retrieving ELM variant data from web')
-                open(mfile, 'w').write(response)
-            mdata = list(csv.DictReader(open(mfile, 'r'), delimiter='\t'))
-            lbound = max(self.resi - 30, 0)
-            ubound = min(self.resi + 30, len(self.seq))
-            for entry in data:
-                if int(entry['start']) < self.resi < int(entry['stop']):
-                    for m in range(len(mdata)):
-                        mentry = mdata[m]
-                        if entry['elm_identifier'] == mentry['elm_identifier'] and int(entry['start']) == int(
-                                mentry['start']) + lbound:
-                            del mdata[m]
-                            self.mutational_effect.append(
-                                'Possible linear motif <a target="_blank" href="http://elm.eu.org/elms/{0}">{0} <i class="fas fa-external-link-square"></i></a> spanning mutation: preserved'.format(
-                                    entry['elm_identifier']))
-                            break
-                    else:
+        mfile = os.path.join(self.settings.ELM_variant_folder, self.uniprot + '_' + self.file_friendly_mutation + '_ELM_variant.tsv')
+        if os.path.isfile(mfile):
+            self.log('Reading ELM variant data from file')
+        else:
+            self._assert_fetchable('ELM (variant)')
+            mseq = self.seq[0:self.resi - 1] + self.to_resn + self.seq[self.resi:]
+            mseq_trim = mseq[max(self.resi - 30, 0):min(self.resi + 30, len(self.seq))]
+            assert mseq_trim, 'Something went wrong in parsing {0}'.format(mseq)
+            req = requests.get('http://elm.eu.org/start_search/{}'.format(mseq_trim))
+            if req.status_code == 429:
+                time.sleep(60)
+                self.query_ELM()
+                return
+            elif req.status_code != 200:
+                raise ConnectionError('Could not retrieve data: ' + req.text)
+            response = req.text
+            self.log('Retrieving ELM variant data from web')
+            open(mfile, 'w').write(response)
+        mdata = list(csv.DictReader(open(mfile, 'r'), delimiter='\t'))
+        lbound = max(self.resi - 30, 0)
+        ubound = min(self.resi + 30, len(self.seq))
+        for entry in data:
+            if int(entry['start']) < self.resi < int(entry['stop']):
+                for m in range(len(mdata)):
+                    mentry = mdata[m]
+                    if entry['elm_identifier'] == mentry['elm_identifier'] and int(entry['start']) == int(
+                            mentry['start']) + lbound:
+                        del mdata[m]
                         self.mutational_effect.append(
-                            'Possible linear motif <a target="_blank" href="http://elm.eu.org/elms/{0}">{0} <i class="fas fa-external-link-square"></i></a> spanning mutation: lost'.format(
+                            'Possible linear motif <a target="_blank" href="http://elm.eu.org/elms/{0}">{0} <i class="fas fa-external-link-square"></i></a> spanning mutation: preserved'.format(
                                 entry['elm_identifier']))
-            if mdata:
-                for entry in mdata:
-                    if int(entry['start']) < 30 and int(entry['stop']) > 30:
-                        self.mutational_effect.append(
-                            'Possible new linear motif <a target="_blank" href="http://elm.eu.org/elms/{0}">{0} <i class="fas fa-external-link-square"></i></a> spanning mutation'.format(
-                                entry['elm_identifier']))
-
-
+                        break
+                else:
+                    self.mutational_effect.append(
+                        'Possible linear motif <a target="_blank" href="http://elm.eu.org/elms/{0}">{0} <i class="fas fa-external-link-square"></i></a> spanning mutation: lost'.format(
+                            entry['elm_identifier']))
+        if mdata:
+            for entry in mdata:
+                if int(entry['start']) < 30 and int(entry['stop']) > 30:
+                    self.mutational_effect.append(
+                        'Possible new linear motif <a target="_blank" href="http://elm.eu.org/elms/{0}">{0} <i class="fas fa-external-link-square"></i></a> spanning mutation'.format(
+                            entry['elm_identifier']))
 
     def fetch_ENSP(self):
         """EMBL ids should vome from the Unirpto entry. However, in some cases too many it is absent."""
@@ -492,16 +474,17 @@ class Protein(_UniprotMixin):
         return self
 
     @_failsafe
-    def get_pLI(self):
+    def parse_pLI(self):
         for line in csv.DictReader(self.settings.open('ExAC_pLI'), delimiter='\t'):
             # transcript	gene	chr	n_exons	cds_start	cds_end	bp	mu_syn	mu_mis	mu_lof	n_syn	n_mis	n_lof	exp_syn	exp_mis	exp_lof	syn_z	mis_z	lof_z	pLI	pRec	pNull
-            if self.gene == line['gene']:
+            if self.gene_name == line['gene']:
                 self.pLI = float(line['pLI'])  # intolerant of a single loss-of-function variant (like haploinsufficient genes, observed ~ 0.1*expected)
                 self.pRec = float(line['pRec'])  # intolerant of two loss-of-function variants (like recessive genes, observed ~ 0.5*expected)
                 self.pNull = float(line['pNull'])  # completely tolerant of loss-of-function variation (observed = expected)
                 break
         else:
             warn('Gene {} not found in ExAC table.'.format(self.gene))
+        return self
 
     @_failsafe
     def get_ExAC(self):
@@ -635,20 +618,54 @@ class Protein(_UniprotMixin):
         # done
         return self
 
+    @_failsafe
+    def match_pdb(self):
+        # variable self.matched_pdbs not used...
+        file = os.path.join(self.settings.pdb_blast_folder, self.uniprot + '_blastPDB.xml')
+        if os.path.isfile(file):
+            pass
+        else:
+            raise Exception('This is impossible. Preparsed.') #todo make a settings flag for this
+            self._assert_fetchable(self.gene + ' PDB match')
+            self.log('Blasting against PDB dataset of NCBI')
+            result_handle = NCBIWWW.qblast("blastp", "pdb", self.seq)  # the whole sequence.
+            open(file, "w").write(result_handle.read())
+        blast_record = NCBIXML.read(open(file))
+        # Parse!
+        matches = []
+        for align in blast_record.alignments:
+            for hsp in align.hsps:
+                if hsp.score > 100:
+                    d = {'match': align.title[0:50], 'match_score': hsp.score, 'match_start': hsp.query_start, 'match_length': hsp.align_length, 'match_identity': hsp.identities / hsp.align_length}
+                    self.pdb_matches.append(d)
+                    #if hsp.query_start < self.resi < hsp.align_length + hsp.query_start:
+
+                    # self.pdb_resi=self.resi+(hsp.sbjct_start-hsp.query_start) #this is a massive pickle as the NCBI pdb data has different numbering.
+        if matches:
+            self.log('GENE MUTANT WITHIN CRYSTAL STRUCTURE!!')
+            # mostly based on identity, but if a long one exists and it is only marginally worse the go for that.
+            best = sorted(matches, key=lambda m: m['match_length'] * m['match_identity'] ** 3, reverse=True)[0]
+            for k in best:
+                setattr(self, k, best[k]) #forgot what the hell this is!
+        else:
+            self.log('UNCRYSTALLISED MUTATION')
+        return self
+
     def parse_all(self, mode='parallel'):
         """
         Gets all the data. if running in parallel see self._threads list.
-        :param mode: parallel | backgroud (=parallel but not complete) | serial (or anything else)
+        :param mode: parallel | background (=parallel but not complete) | serial (or anything else)
         :return:
         """
         tasks = {'Uniprot': self.parse_uniprot, #done.
                  'PFam': self.parse_pfam, #done.
                  'ELM': self.query_ELM,
-                 'pLI': self.get_pLI,
+                 'pLI': self.parse_pLI,
                  'ExAC': self.get_ExAC,
                  'manual': self.add_manual_data,
                  #'GO terms': self.fetch_go,
                  'Binding partners': self.fetch_binders}
+        tasks = {'Uniprot': self.parse_uniprot} #TODO remove skippage
         if mode in ('parallel','background'):
             threads = {}
             for k, fn in tasks.items():
@@ -689,7 +706,7 @@ class Protein(_UniprotMixin):
     def parse_pLI(self):
         for line in csv.DictReader(self.settings.open('ExAC_pLI'), delimiter='\t'):
             # transcript	gene	chr	n_exons	cds_start	cds_end	bp	mu_syn	mu_mis	mu_lof	n_syn	n_mis	n_lof	exp_syn	exp_mis	exp_lof	syn_z	mis_z	lof_z	pLI	pRec	pNull
-            if self.gene == line['gene']:
+            if self.gene_name == line['gene']:
                 self.pLI = float(line['pLI'])  # intolerant of a single loss-of-function variant (like haploinsufficient genes, observed ~ 0.1*expected)
                 self.pRec = float(line['pRec'])  # intolerant of two loss-of-function variants (like recessive genes, observed ~ 0.5*expected)
                 self.pNull = float(line['pNull'])  # completely tolerant of loss-of-function variation (observed = expected)
@@ -709,10 +726,44 @@ class Protein(_UniprotMixin):
         raise ValueError('Will failsafe catch it? ({})'.format(self.settings.error_tollerant))
 
     def check_mutation(self, mutation):
-        if len(self.sequence) > mutation.residue and self.sequence[mutation.resi - 1] == mutation.from_resn:
+        if len(self.sequence) > mutation.residue_index and self.sequence[mutation.residue_index - 1] == mutation.from_residue:
             return True
         else:
-            return False
+            return False # call mutation_discrepancy to see why.
+
+    def mutation_discrepancy(self, mutation):
+        # returns a string explaining the check_mutation discrepancy
+        neighbours=''
+        if len(self.sequence) < mutation.residue_index:
+            return 'Uniprot {g} is {l} amino acids long, while user claimed a mutation at {i}.'.format(
+                g=self.uniprot,
+                i=mutation.residue_index,
+                l=len(self.sequence)
+                )
+        else:
+            if mutation.residue_index < 5:
+                neighbours = '{pre}*{i}*{post}'.format(pre=self.sequence[:mutation.residue_index-1],
+                                                       i=self.sequence[mutation.residue_index-1],
+                                                       post=self.sequence[mutation.residue_index:mutation.residue_index+5])
+            elif mutation.residue_index > 5 and len(self.sequence) > mutation.residue_index + 5:
+                neighbours = '{pre}*{i}*{post}'.format(pre=self.sequence[mutation.residue_index - 6:mutation.residue_index - 1],
+                                                       i=self.sequence[mutation.residue_index - 1],
+                                                       post=self.sequence[mutation.residue_index:mutation.residue_index + 5])
+            elif len(self.sequence) < mutation.residue_index + 5:
+                neighbours = '{pre}*{i}*{post}'.format(pre=self.sequence[mutation.residue_index - 6:mutation.residue_index - 1],
+                                                       i=self.sequence[mutation.residue_index - 1],
+                                                       post=self.sequence[mutation.residue_index:])
+            else:
+                print('impossible?!')
+                neighbours = 'ERROR.'
+            return 'Residue {i} is {n} in Uniprot {g}, while user claimed it was {f}. (neighbouring residues: {s}'.format(
+                                                                            i=mutation.residue_index,
+                                                                            n=self.sequence[mutation.residue_index - 1],
+                                                                            g=self.uniprot,
+                                                                            f=mutation.from_residue,
+                                                                            s=neighbours
+                                                                            )
+
 
 class Mutation:
     """
@@ -725,9 +776,14 @@ class Mutation:
         if mutation:
             self.parse_mutation(mutation)
 
+    def __str__(self):
+        # note taht this is not file-safe
+        return self.from_residue+str(self.residue_index)+self.to_residue
+
     #raise NotImplementedError('Under upgrade')
     def parse_mutation(self, mutation):
-        assert mutation.find('.c') == -1, 'Chromosome mutation not accepted. Use Proetien.'
+        ##### clean
+        assert mutation.find('.c') == -1, 'Chromosome mutation not accepted. Use Protein.'
         # remove the p.
         mutation = mutation.replace('p.', '').replace('P.', '')
         for (single, triple) in (
@@ -736,15 +792,18 @@ class Mutation:
                 ('I', 'Ile'), ('K', 'Lys'), ('L', 'Leu'), ('M', 'Met'), ('N', 'Asn'), ('P', 'Pro'), ('Q', 'Gln'),
                 ('R', 'Arg'),
                 ('S', 'Ser'), ('T', 'Thr'), ('V', 'Val'), ('W', 'Trp'), ('X', 'Xaa'), ('Y', 'Tyr'), ('Z', 'Glx')):
-            self.mutation = self.mutation.replace(triple, single)
+            if mutation.find(triple) != -1 or mutation.find(triple.lower()) != -1 or mutation.find(triple.upper()):
+                mutation = mutation.replace(triple, single).replace(triple.upper(), single).replace(triple.lower(), single)
+        self.mutation = mutation
+        ###### split
         if self.mutation.find('fs') != -1 or self.mutation.find('*') != -1:
             rex = re.match('(\w)(\d+)', self.mutation)
             if rex:
-                self.from_resn = rex.group(1)
-                self.resi = int(rex.group(2))
-                self.to_resn = '*'
-                self.file_friendly_mutation = self.from_resn + str(self.resi) + 'stop'
-                self.clean_mutation = self.from_resn + str(self.resi) + '*'
+                self.from_residue = rex.group(1)
+                self.residue_index = int(rex.group(2))
+                self.to_residue = '*'
+                self.file_friendly_mutation = self.from_residue + str(self.residue_index) + 'stop'
+                self.clean_mutation = self.from_residue + str(self.residue_index) + '*'
             else:
                 raise ValueError('odd mutation of type fs' + self.mutation)
         elif self.mutation.find('del') != -1 or self.mutation.find('\N{GREEK CAPITAL LETTER DELTA}') != -1:
@@ -754,11 +813,11 @@ class Mutation:
             if not rex:
                 rex = re.match('(\w)(\d+)del', self.mutation)
             if rex:
-                self.from_resn = rex.group(1)
-                self.resi = int(rex.group(2))
-                self.to_resn = rex.group(1)  # technically not but shush...
-                self.file_friendly_mutation = 'del' + self.from_resn + str(self.resi)
-                self.clean_mutation = 'del' + self.from_resn + str(self.resi)
+                self.from_residue = rex.group(1)
+                self.residue_index = int(rex.group(2))
+                self.to_residue = rex.group(1)  # technically not but shush...
+                self.file_friendly_mutation = 'del' + self.from_residue + str(self.residue_index)
+                self.clean_mutation = 'del' + self.from_residue + str(self.residue_index)
                 warn('Mutation parsing: Deletions are not handled correctly atm...')
                 self.log('Residue deletion is not handled correctly at the moment...')
             else:
@@ -768,14 +827,12 @@ class Mutation:
             if rex:
                 assert rex.group(1) in 'QWERTYIPASDFGHKLCVNM*', 'The from mutant is not a valid amino acid'
                 assert rex.group(3) in 'QWERTYIPASDFGHKLCVNM*', 'The to mutant is not a valid amino acid'
-                self.from_resn = rex.group(1)
-                self.resi = int(rex.group(2))
-                self.to_resn = rex.group(3)
-                self.file_friendly_mutation = self.from_resn + str(self.resi) + self.to_resn
-                self.clean_mutation = self.from_resn + str(self.resi) + self.to_resn
-                self.blossum_score = self.blossum[self.from_resn][self.to_resn]
+                self.from_residue = rex.group(1)
+                self.residue_index = int(rex.group(2))
+                self.to_residue = rex.group(3)
+                self.file_friendly_mutation = self.from_residue + str(self.residue_index) + self.to_residue
+                self.clean_mutation = self.from_residue + str(self.residue_index) + self.to_residue
+                #self.blossum_score = self.blossum[self.from_residue][self.to_residue]
             else:
                 raise ValueError(self.mutation + ' is an odd_mutation')
         return self
-
-        # todo. Finish. Parse shit input. say three-letter or full word code.

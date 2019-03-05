@@ -1,18 +1,29 @@
-<%page args="variant, home=''"/>
-## variant is a dictionary here!!
+<%page args="protein, home=''"/>
 
-<div class="container-fluid ">
+<div class="container-fluid" id="results">
     <div class="row">
         <!-- sidebar -->
         <div class="col-md-2 d-flex flex-column">
+            <a class="btn btn-success" id="new_analysis"><i class="far fa-search"></i> New query</a>
             <a class="btn btn-info" id="guide"><i class="far fa-compass"></i> Guided Tour</a>
-            <a class="btn btn-dark text-muted"><i class="far fa-dumpster-fire"></i> etc</a>
             <a class="btn btn-dark text-muted"><i class="far fa-dumpster-fire"></i> etc</a>
         </div>
         <div class="col-md-10">
             <div class="row">
                 <!-- Main text -->
-                <div class="col-md-12" id="user_text">${variant.user_text}</div>
+                <div class="col-md-12 mb-4">
+                    <div class="card">
+                        <div class="card-header"><h3 class="card-title">
+                            ${protein.gene_name}
+                        </h3><h6 class="card-subtitle mb-2 text-muted">
+                            Something.
+                        </h6></div>
+
+                      <div class="card-body">
+                      Data.
+                      </div>
+                      </div>
+                    </div>
                 <!-- Feature -->
                 <div class="col-md-7">
                     <div class="card">
@@ -44,5 +55,5 @@
 </div>
 
 
-<%include file="results.tour.js.mako" args="variant=variant, home=''"></%include>
-<%include file="results.js.mako"      args="variant=variant, home=''"></%include>
+##<%include file="results.tour.js.mako" args="protein=protein, home=''"></%include>
+<%include file="results.js.mako" args="protein=protein, home=''"></%include>

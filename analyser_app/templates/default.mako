@@ -25,7 +25,7 @@
         <div class="input-group-prepend">
             <label class="input-group-text" id="gene_label">Gene name </label>
         </div>
-        <input type="text" class="form-control" placeholder="gene name" aria-label="gene name" aria-describedby="gene_label" id="gene">
+        <input type="text" class="form-control" placeholder="gene name" aria-label="gene name" aria-describedby="gene_label" id="gene" value="IGF2">
                     <div class="invalid-feedback">Gene name not recognised.</div>
                     <div class="valid-feedback">Gene name accepted.</div>
         </div>
@@ -36,7 +36,7 @@
         <div class="input-group-prepend">
             <label class="input-group-text" id="mutation_label">missense </label>
         </div>
-        <input type="text" class="form-control" placeholder="p.M1M" aria-label="mutation" aria-describedby="mutation_label" id="mutation">
+        <input type="text" class="form-control" placeholder="p.M1M" aria-label="mutation" aria-describedby="mutation_label" id="mutation" value="p.M1M">
                     <div class="invalid-feedback">Mutation name not recognised.</div>
                     <div class="valid-feedback">Mutation name accepted.</div>
         </div>
