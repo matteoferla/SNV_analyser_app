@@ -62,6 +62,7 @@ $('#demo').click(function () {
     $.ajax({type: 'POST',
             url: 'get_random'}).done(function (msg) {
         $('#gene').val(msg.name);
+        $('#mutation').val(msg.mutation);
     });
 });
 

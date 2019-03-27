@@ -4,12 +4,6 @@
 //d3.scale={linear: d3.scaleLinear};
 
 ###################################################
-<%
-    print('Print within mako')
-    print(protein.features)
-    print(protein.features.keys())
-%>
-
 window.ft = new FeatureViewer('${protein.sequence}',
            '#fv',
             {
@@ -169,7 +163,7 @@ $('.domain,.dsB').each(function () {
         var ad = id.split('_')[2];
         $(this).css('cursor', 'pointer');
         $(this).click(function () {
-            NGL.specialOps.showResidue('viewport', ab+'-'+ad+':'+ops.current_chain);
+            NGL.specialOps.showResidue('viewport', ab+':'+ops.current_chain+' or '+ad+':'+ops.current_chain);
         });
     });
 
@@ -201,9 +195,10 @@ $('.pdb').click(function () {
     console.log('Failed.')
 });
 
-//structure
+###  structure ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ###
 ### python proteins.pdbs is a list of {'description': elem.attrib['id'], 'id': elem.attrib['id']+'_'+chainid, 'x': loca[0], 'y': loca[1]}
 ### JS proteins is a list of {name: 'unique_name', type: 'rcsb' (default) | 'file' | 'data', value: xxx, 'ext': 'pdb' , loadFx: xxx}
+
 % if protein.pdbs:
 
     var data = ${str(protein.pdbs)|n}.map(function (prot) {
@@ -238,11 +233,11 @@ $('.pdb').click(function () {
 
 % else:
     $('#viewport').append('<p><i class="far fa-dumpster-fire"></i> No model available.</p>');
-
 % endif
 
 
 $('#new_analysis').click(function () {
+    NGL.specialOps.hardReset();
     $('#retrieval_card').show(1000);
     $('#input_card').show(1000);
     $('#results').detach();

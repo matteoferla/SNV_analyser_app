@@ -14,13 +14,16 @@
                 <div class="col-md-12 mb-4">
                     <div class="card shadow-sm">
                         <div class="card-header"><h3 class="card-title">
-                            ${protein.gene_name}
+                            ${protein.gene_name} ${mutation}
                         </h3><h6 class="card-subtitle mb-2 text-muted">
-                            Something.
+                            Predicted effects
                         </h6></div>
 
                       <div class="card-body">
-                      Data.
+                      <ul class="list-group list-group-flush">
+                        <li class="list-group-item"><b>Effect independent of structure</b> &mdash; ${mutation.apriori_effect}</li>
+                        <li class="list-group-item"><b>Effect dependent of structure</b> &mdash; ???</li>
+                      </ul>
                       </div>
                       </div>
                     </div>

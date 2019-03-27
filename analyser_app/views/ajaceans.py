@@ -64,7 +64,7 @@ def analyse_view(request):
         protein.mutation=mutation
         protein.predict_effect()
         request.session['status']['step'] = 'complete'
-        return {'protein': protein}
+        return {'protein': protein, 'mutation': mutation}
     except NotImplementedError as err:
         print('actual error')
         traceback.print_exc(limit=3, file=sys.stdout)
@@ -88,6 +88,18 @@ def status_check_view(request):
 def random_view(request):
     choices = list(namedex.items())
     random.shuffle(choices)
-    for k,v in choices: ## in future onve fully parsed. .choice
+    for k,v in choices: ## in future once fully parsed. .choice
         if os.path.exists(os.path.join(ProteinLite.settings.pickle_folder,v+'.p')):
-            return {'name': k}
+            protein = ProteinLite(uniprot=v).load()
+            if protein.pdbs:
+                pdb = protein.pdbs[0]
+            elif protein.swissmodel:
+                pdb = protein.swissmodel[0]
+            else:
+                continue
+            i = random.randint(int(pdb['x'])-1, int(pdb['y'])-1)
+            try:
+                return {'name': k, 'mutation': 'p.{f}{i}{t}'.format(f = protein.sequence[i], i = i+1, t = random.choice(Mutation.aa_list))}
+            except IndexError:
+                print('Error... PDB numbering is wonky!')
+

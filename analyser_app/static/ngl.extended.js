@@ -124,6 +124,14 @@ NGL.specialOps.showResidue = function (id, selection, color, radius, view) {
         }
     };
 
+NGL.specialOps.hardReset = function () {  //when the page is faux-refreshed.
+    Object.entries(NGL.stageIds).forEach(([k,v]) => $('#'+k).children().detach());
+    window.myData = undefined;
+    NGL.stageIds = {};
+    window.stage = undefined;
+    console.log('HARD RESET.');
+};
+
 NGL.specialOps.showClash = function (id, selection, color, radius, tolerance, view) {
     // Prepare
     NGL.specialOps.postInitialise(); //worst case schenario prevention.
