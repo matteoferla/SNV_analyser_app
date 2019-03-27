@@ -2,10 +2,14 @@
 // feature
 //fix d3 version issue.
 //d3.scale={linear: d3.scaleLinear};
+
+###################################################
 <%
+    print('Print within mako')
     print(protein.features)
     print(protein.features.keys())
 %>
+
 window.ft = new FeatureViewer('${protein.sequence}',
            '#fv',
             {
@@ -17,6 +21,7 @@ window.ft = new FeatureViewer('${protein.sequence}',
                 zoomMax:50 //define the maximum range of the zoom
             });
 
+################### Own SNV #######################
 %if protein.mutation is not None:
 	ft.addFeature({
         data: [{'x':${protein.mutation.residue_index},'y': ${protein.mutation.residue_index}, 'id': 'our_${protein.mutation.residue_index}', 'description': 'p.${str(protein.mutation)}'}],
@@ -28,18 +33,21 @@ window.ft = new FeatureViewer('${protein.sequence}',
     });
 %endif
 
-			
-%if protein.pdbs:
+################### Structures #######################
+%for title, data in (("Crystal structures",protein.pdbs), ("Swissmodel", protein.swissmodel), ("Homologue structures", protein.pdb_matches)):
+    %if data:
     ft.addFeature({
-        data: ${str(protein.pdbs)|n},
-        name: "Crystal structures",
+        data: ${str(data)|n},
+        name: "${title}",
         className: "pdb",
         color: "lime",
         type: "rect",
         filter: "Domain"
     });
-%endif
+    %endif
+%endfor
 
+################### Domains #######################
 %if 'domain' in protein.features:
     ft.addFeature({
         data: ${str(protein.features['domain'])|n},
@@ -161,7 +169,7 @@ $('.domain,.dsB').each(function () {
         var ad = id.split('_')[2];
         $(this).css('cursor', 'pointer');
         $(this).click(function () {
-            NGL.specialOps.show_domain('viewport', ab+'-'+ad+':'+ops.current_chain);
+            NGL.specialOps.showResidue('viewport', ab+'-'+ad+':'+ops.current_chain);
         });
     });
 
@@ -172,18 +180,65 @@ $('.variant,.modified,.our_SNP').each(function () {
         var ab = id.split('_')[1] + ops.current_chain;
         $(this).css('cursor', 'pointer');
         $(this).click(function () {
-            NGL.specialOps.show_residue('viewport', ab+':'+ops.current_chain);
+            NGL.specialOps.showResidue('viewport', ab+':'+ops.current_chain); //(id, selection, color, radius)
         });
     });
 
+$('.pdb').click(function () {
+    var id = $(this).attr('id').slice(1); //remove the first 'f'
+    console.log(id);
+    for (var i=0; i < myData.proteins.length; i++) {
+        if (myData.proteins[i].name === id) {
+            console.log(id +' is '+i.toString());
+            NGL.specialOps.load(i);
+            NGL.specialOps.showTitle("viewport",id);
+            if (data[i].name.search('_') !== -1) {ops.current_chain = myData.proteins[i].name.split('_')[1]}
+            else {ops.current_chain ='A'}
+
+            return 1}
+    }
+
+    console.log('Failed.')
+});
+
 //structure
+### python proteins.pdbs is a list of {'description': elem.attrib['id'], 'id': elem.attrib['id']+'_'+chainid, 'x': loca[0], 'y': loca[1]}
+### JS proteins is a list of {name: 'unique_name', type: 'rcsb' (default) | 'file' | 'data', value: xxx, 'ext': 'pdb' , loadFx: xxx}
 % if protein.pdbs:
-    var stage = new NGL.Stage( "viewport",{backgroundColor: "white"});
-    window.stage = stage;
-    window.addEventListener( "resize", function( event ){stage.handleResize();}, false );
-    stage.loadFile( "rcsb://${protein.pdbs[0]['description'].lower()}", { defaultRepresentation: true } );//.then(function (o) {show_mutant(o);window.pdb=o});
-    NGL.stageIds['viewport'] = stage;
-    ops.current_chain = '${protein.pdbs[0]['id'].split('_')[1]}';
+
+    var data = ${str(protein.pdbs)|n}.map(function (prot) {
+        return {name: prot.id, type: 'rcsb', value: prot.description}
+    });
+    if (data[0].name.search('_') !== -1) {ops.current_chain = data[0].name.split('_')[1]}
+            else {ops.current_chain ='A'}
+
+    NGL.specialOps.multiLoader("viewport",data,"white",0);
+    NGL.specialOps.showTitle("viewport",'PDB: '+data[0].name);
+
+% elif protein.swissmodel:
+
+    var data = ${str(protein.swissmodel)|n}.map(function (prot) {
+        return {name: prot.id, type: 'file', value: prot.url}
+    });
+    ops.current_chain ='A';
+
+    NGL.specialOps.multiLoader("viewport",data,"white",0);
+    NGL.specialOps.showTitle("viewport",'Swissmodel: '+data[0].name);
+
+% elif protein.pdb_matches:
+
+    var data = ${str(protein.swissmodel)|n}.map(function (prot) {
+    return {name: prot.id, type: 'rcsb', value: prot.description}
+    });
+    if (data[0].name.search('_') !== -1) {ops.current_chain = data[0].name.split('_')[1]}
+            else {ops.current_chain ='A'}
+
+    NGL.specialOps.multiLoader("viewport",data,"white",0);
+    NGL.specialOps.showTitle("viewport",'Homologue: '+data[0].name);
+
+% else:
+    $('#viewport').append('<p><i class="far fa-dumpster-fire"></i> No model available.</p>');
+
 % endif
 
 

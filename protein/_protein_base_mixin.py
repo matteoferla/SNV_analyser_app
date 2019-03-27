@@ -1,6 +1,6 @@
 ## _BaseMixin contains __getattr__ and _failsafe decorator
 from warnings import warn
-from protein.settings_handler import global_settings
+from protein.settings_handler import global_settings #the instance not the class.
 
 
 class _BaseMixin:
@@ -14,7 +14,7 @@ class _BaseMixin:
     def _failsafe(func):
         def wrapper(self, *args, **kargs):
             # the call happned after chekcing if it should croak on error so to make the traceback cleaner.
-            if self.settings.error_tollerant:
+            if self.settings.error_tolerant:
                 try:
                     return func(self, *args, **kargs)
                 except Exception as error:
@@ -27,7 +27,7 @@ class _BaseMixin:
 
 
     def __getattr__(self, item):
-        if self.settings.missing_attribute_tollerant:
+        if self.settings.missing_attribute_tolerant:
             if item not in self.__dict__:
                 if item in self.other:  ## it is in the trash!
                     warn('Accessed attribute in other list. Thanks for proving the key:value pair. But please dont abuse this backdoor!')

@@ -1,4 +1,4 @@
-__description__ = """
+__docs__ = """
 Protein was formerly called Variant.
 """
 
@@ -12,29 +12,29 @@ import markdown
 import xmlschema
 import threading
 from collections import defaultdict
-from datetime import datetime
 from warnings import warn
 from shutil import copyfile
 import requests  # for xml fetcher.
 
-from protein.ET_monkeypatch import ET #monkeypatched version
-from protein.settings_handler import global_settings
-from Bio.Blast import NCBIWWW
-from Bio.Blast import NCBIXML
+from .ET_monkeypatch import ET #monkeypatched version
+from .settings_handler import global_settings
 
-from protein._protein_uniprot_mixin import _UniprotMixin
+from ._protein_uniprot_mixin import _UniprotMixin
+from ._protein_base_mixin import _BaseMixin
+from ._protein_disused_mixin import _DisusedMixin
+from ._protein_lite import ProteinLite
 # Protein inherits _UniprotMixin, which in turn inherits _BaseMixin
 # `.settings` class attribute is global_settings from settings_handler.py and is added by _BaseMixin.
 # _BaseMixin is inherited by _UniprotMixin contains _failsafe decorator, __getattr__ and settings
 
 #######################
-class Protein(_UniprotMixin):
+class Protein(ProteinLite, _BaseMixin, _DisusedMixin, _UniprotMixin):
     """
     This class handles each protein entry from Uniprot. See __init__ for the list of variables stored.
     It fills them from various other sources.
 
         >>> Protein()
-        >>> Protein(xml_entry) # equivalent to Protein()._parse_unicode_xml(xml_entry)
+        >>> Protein(xml_entry) # equivalent to Protein()._parse_uniprot_xml(xml_entry)
         >>> Protein.load('filename')
 
     NB. The ET.Element has to be monkeypatched. See `help(ElementalExpansion)`
@@ -49,7 +49,7 @@ class Protein(_UniprotMixin):
     def _failsafe(func):
         def wrapper(self, *args, **kargs):
             # the call happned after chekcing if it should croak on error so to make the traceback cleaner.
-            if self.settings.error_tollerant:
+            if self.settings.error_tolerant:
                 try:
                     return func(self, *args, **kargs)
                 except Exception as error:
@@ -61,72 +61,10 @@ class Protein(_UniprotMixin):
         return wrapper
 
     ############################# INIT #############################
-
-    def __init__(self, entry=None, gene_name='', uniprot = '', uniprot_name = '', sequence='', **other):
-        ### predeclaration (and cheatsheet)
-        self.xml = entry
-        self.gene_name = gene_name
-        self.uniprot_name = uniprot_name ## S39AD_HUMAN
-        #### uniprot derivved
-        self.uniprot = uniprot ## uniprot accession
-        self.alt_gene_name_list = []
-        self.accession_list = [] ## Q96H72 etc.
-        self.sequence = sequence  ###called seq in early version causing eror.rs
-        self.recommended_name = '' #Zinc transporter ZIP13
-        self.alternative_fullname_list = []
-        self.alternative_shortname_list = []
-        self.features={}  #see _parse_protein_feature. Dictionary of key: type of feature, value = list of dict with the FeatureViewer format (x,y, id, description)
-        self.partners ={'interactant': [],  #from uniprot
-                        'BioGRID': [],  #from biogrid downlaoad
-                        'SSL': [],  #Slorth data
-                        'stringDB highest': [],  # score >900
-                        'stringDB high': [],  #900 > score > 700
-                        'stringDB medium': [], #400 > score > 400
-                        'stringDB low': [] #score < 400
-                        } # lists not sets as it gave a pickle issue.
-        self.diseases=[] # 'description', 'name', 'id', 'MIM'
-        self.pdbs = []  # {'description': elem.attrib['id'], 'id': elem.attrib['id'], 'x': loca[0], 'y': loca[1]}
-        ### ExAC
-        self.ExAC_type = 'Unparsed' # Dominant | Recessive | None | Unknown (=???)
-        self.pLI = -1
-        self.pRec = -1
-        self.pNull = -1
-        ### pdb
-        self.pdb_matches =[] #{'match': align.title[0:50], 'match_score': hsp.score, 'match_start': hsp.query_start, 'match_length': hsp.align_length, 'match_identity': hsp.identities / hsp.align_length}
-        ### other ###
-        self.user_text = ''
-        ### mutation ###
-        self.mutation = None
-        ### junk
-        self.other = other ### this is a garbage bin. But a handy one.
-        self.logbook = [] # debug purposes only. See self.log()
-        self._threads = {}
-        ### fill
-        if entry:
-            self._parse_uniprot_xml(entry)
-
-    def complete(self):
-        for k in self._threads:
-            if self._threads[k] and self._threads[k].is_alive():
-                self._threads[k].join()
-        self._threads = {}
-        return self
-
-
-    ############################# IO #############################
-    def dump(self, file=None):
-        if not file:
-            file = os.path.join(self.settings.pickle_folder, '{0}.p'.format(self.uniprot_name))
-        self.complete() # wait complete.
-        pickle.dump(self.__dict__, open(file, 'wb'))
-        self.log('Data saved to {} as pickled dictionary'.format(file))
-
     @classmethod
-    def load(cls, file):
-        self = cls.__new__(cls)
-        self.__dict__ = pickle.load(open(file, 'rb'))
-        self.log('Data from the pickled dictionary {}'.format(file))
-        return self
+    def from_uniprot(cls, entry):
+        self=cls()
+        self._parse_uniprot_xml(entry)
 
     def write_uniprot(self, file=None):
         if not file:
@@ -140,13 +78,6 @@ class Protein(_UniprotMixin):
             else:
                 w.write(ET.tostring(self.xml).decode())
             w.write('</uniprot>')
-
-
-    def log(self, text):
-        msg = '[{}]\t'.format(str(datetime.now())) + text
-        self.logbook.append(msg)
-        if self.settings.verbose:
-            print(msg)
 
     ############################# Data gathering #############################
     def _assert_fetchable(self, text):
@@ -162,6 +93,7 @@ class Protein(_UniprotMixin):
                 xml = w.read()
             self.log('{0} read from file {1}'.format(mode, file))
         else:
+            warn('Missing file {0}'.format(file))
             self._assert_fetchable(mode)
             if mode == 'uniprot':
                 requestURL = 'https://www.ebi.ac.uk/proteins/api/proteins?offset=0&size=100&accession={acc}&taxid=9606'.format(
@@ -265,19 +197,8 @@ class Protein(_UniprotMixin):
         """
         xml = self.xml_fetcher('uniprot')
         self.xml = ET.fromstring(xml)[0]
-        self._parse_unicode_xml(self.xml)
+        self._parse_uniprot_xml(self.xml)
         return self
-
-    @_failsafe
-    def parse_pfam(self):
-        # https://pfam.xfam.org/help#tabview=tab11
-        xml = self.xml_fetch_n_parser('pfam')
-        if isinstance(xml, list):
-            self.pfam = xml
-        elif isinstance(xml, dict):
-            self.pfam = [xml]
-        else:
-            raise ValueError('not list or dict pfam data: ' + str(xml))
 
     @_failsafe
     def fetch_binders(self):
@@ -286,51 +207,59 @@ class Protein(_UniprotMixin):
             with open(file) as f:
                 self.partners = json.load(f)
         else:
+            ###################### SSL http://slorth.biochem.sussex.ac.uk/download/h.sapiens_ssl_predictions.csv
+            self.log('parsing SSL...')
             for row in self.settings.open('ssl'):
                 # CHEK1	MTOR	ENSG00000149554	ENSG00000198793	H. sapiens	BioGRID	2208318, 2342099, 2342170	3
-                if self.gene in row:
+                if self.gene_name in row:
                     protein_set = set(row.split('\t')[:2])
-                    protein_set.discard(self.gene)
-                    if protein_set == 1:
+                    protein_set.discard(self.gene_name)
+                    if len(protein_set) == 1:
                         self.partners['SSL'].append(protein_set.pop())
-                    else:  # most likely a partial match.
-                        pass
-                        # warn('Impossible SSL '+row)
+                    else:  # most likely a partial match. maybe???
+                        print('Impossible SSL '+row)
+                        print('{0} after discarding {1} erroneously became {2}'.format(protein_set, self.gene_name, set(row.split('\t')[:2])))
+            ###################### HURI cat.psi
+            self.log('parsing HURI...')
             for row in self.settings.open('huri'):
                 # Unique identifier for interactor A	Unique identifier for interactor B	Alternative identifier for interactor A	Alternative identifier for interactor B	Aliases for A	Aliases for B	Interaction detection methods	First author	Identifier of the publication	NCBI Taxonomy identifier for interactor A	NCBI Taxonomy identifier for interactor B	Interaction types	Source databases	Interaction identifier(s)	Confidence score	Complex expansion	Biological role A	Biological role B	Experimental role A	Experimental role B	Interactor type A	Interactor type B	Xref for interactor A	Xref for interactor B	Xref for the interaction	Annotations for interactor A	Annotations for interactor B	Annotations for the interaction	NCBI Taxonomy identifier for the host organism	Parameters of the interaction	Creation date	Update date	Checksum for interactor A	Checksum for interactor B	Checksum for interaction	negative	Feature(s) for interactor A	Feature(s) for interactor B	Stoichiometry for interactor A	Stoichiometry for interactor B	Participant identification method for interactor A	Participant identification method for interactor B
                 # -	uniprotkb:Q6P1W5-2	ensembl:ENST00000507897.5|ensembl:ENSP00000426769.1|ensembl:ENSG00000213204.8	ensembl:ENST00000373374.7|ensembl:ENSP00000362472.3|ensembl:ENSG00000142698.14	human orfeome collection:2362(author assigned name)	human orfeome collection:5315(author assigned name)	"psi-mi:""MI:1112""(two hybrid prey pooling approach)"	Yu et al.(2011)	pubmed:21516116	taxid:9606(Homo Sapiens)	taxid:9606(Homo Sapiens)	"psi-mi:""MI:0407""(direct interaction)"	-	-	-	-	-	-	"psi-mi:""MI:0496""(bait)"	"psi-mi:""MI:0498""(prey)"	"psi-mi:""MI:0326""(protein)"	"psi-mi:""MI:0326""(protein)"	-	-	-	"comment:""vector name: pDEST-DB""|comment:""centromeric vector""|comment:""yeast strain: Y8930"""	"comment:""vector name: pDEST-AD""|comment:""centromeric vector""|comment:""yeast strain: Y8800"""	"comment:""Found in screens 1."""	taxid:4932(Saccharomyces cerevisiae)	-	6/30/2017	-	-	-	-	-	DB domain (n-terminal): gal4 dna binding domain:n-n	AD domain (n-terminal): gal4 activation domain:n-n	-	-	"psi-mi:""MI1180""(partial DNA sequence identification)"	"psi-mi:""MI1180""(partial DNA sequence identification)"
-                if ':' + self.gene + '(' in row:  #
+                if ':' + self.gene_name + '(' in row:  #
                     protein_set = re.findall('\:(\w+)\(gene name\)', row)
                     if len(protein_set) == 2:
                         protein_set = set(protein_set)
-                        protein_set.discard(self.gene)
-                        if protein_set == 1:
+                        protein_set.discard(self.gene_name)
+                        if len(protein_set) == 1:
                             self.partners['HuRI'].append(protein_set.pop())
-                    # t = set(row.split('\t')[:2])
-                    # print(t)
-                    # if t:
-                    #     for p in t:
-                    #         if 'uniprot' in p:
-                    #             # match uniprot id to gene with go_human or similar.
-                    #             match=[r for r in self.settings.open('go_human') if p.replace('uniprotkb:','') in r]
-                    #             if match:
-                    #                 self.partners['HuRI'].append(match[0].split('\t')[2]) #uniprotKB	A0A024RBG1	NUDT4B		GO:0003723
-                    #             else:
-                    #                 warn('Unmatched',p)
-                    #         else:
-                    #             warn('Unmatched', p)
+                        elif len(len(protein_set) == 0): ### multimeric
+                            pass
+                        else:
+                            print('Impossible HURI ' + row)
+                            print('{0} after discarding {1} erroneously became {2}'.format(protein_set, self.gene_name, re.findall('\:(\w+)\(gene name\)', row)))
+
                     else:
-                        warn('Impossible HuRI ' + row)
+                        print('Impossible HURI ' + row)
+            ###################### biogrid https://downloads.thebiogrid.org/Download/BioGRID/Release-Archive/BIOGRID-3.5.166/BIOGRID-ALL-3.5.166.mitab.zip
+            self.log('parsing biogrid...')
             for row in self.settings.open('biogrid'):
                 # ID Interactor A	ID Interactor B	Alt IDs Interactor A	Alt IDs Interactor B	Aliases Interactor A	Aliases Interactor B	Interaction Detection Method	Publication 1st Author	Publication Identifiers	Taxid Interactor A	Taxid Interactor B	Interaction Types	Source Database	Interaction Identifiers	Confidence Values
                 # entrez gene/locuslink:6416	entrez gene/locuslink:2318	biogrid:112315|entrez gene/locuslink:MAP2K4	biogrid:108607|entrez gene/locuslink:FLNC	entrez gene/locuslink:JNKK(gene name synonym)|entrez gene/locuslink:JNKK1(gene name synonym)|entrez gene/locuslink:MAPKK4(gene name synonym)|entrez gene/locuslink:MEK4(gene name synonym)|entrez gene/locuslink:MKK4(gene name synonym)|entrez gene/locuslink:PRKMK4(gene name synonym)|entrez gene/locuslink:SAPKK-1(gene name synonym)|entrez gene/locuslink:SAPKK1(gene name synonym)|entrez gene/locuslink:SEK1(gene name synonym)|entrez gene/locuslink:SERK1(gene name synonym)|entrez gene/locuslink:SKK1(gene name synonym)	entrez gene/locuslink:ABP-280(gene name synonym)|entrez gene/locuslink:ABP280A(gene name synonym)|entrez gene/locuslink:ABPA(gene name synonym)|entrez gene/locuslink:ABPL(gene name synonym)|entrez gene/locuslink:FLN2(gene name synonym)|entrez gene/locuslink:MFM5(gene name synonym)|entrez gene/locuslink:MPD4(gene name synonym)	psi-mi:"MI:0018"(two hybrid)	"Marti A (1997)"	pubmed:9006895	taxid:9606	taxid:9606	psi-mi:"MI:0407"(direct interaction)	psi-mi:"MI:0463"(biogrid)	biogrid:103	-
-                if self.gene in row:
-                    protein_set = set([re.search('locuslink:([\w\-\.]+)\|?', e.replace('\n', '')).group(1) for e in row.split('\t')[2:4]])
-                    protein_set.discard(self.gene)
+                if self.gene_name in row:
+                    protein_set = set()
+                    for e in row.split('\t')[2:4]:
+                        rex = re.search('locuslink:([\w\-\.]+)\|?', e.replace('\n', ''))
+                        if rex:
+                            protein_set.add(rex.group(1))
+                        else:
+                            pass
+                            #warn('locuslink not found in {}'.format(e.replace('\n', '')))
+                    protein_set.discard(self.gene_name)
                     if len(protein_set) == 1:
                         matched_protein = protein_set.pop()
                         self.partners['BioGRID'].append(matched_protein)
             if len(self.ENSP) > 10:
+                ###################### biogrid https://stringdb-static.org/download/protein.links.v10.5/9606.protein.links.v10.5.txt.gz
+                self.log('parsing string...')
                 with self.settings.open('string') as ref:
                     for row in ref:
                         if self.ENSP in row:
@@ -356,6 +285,8 @@ class Protein(_UniprotMixin):
                                 self.partners['stringDB high'].append(converted_gene)
                             elif score > 400:  # medium confidence
                                 self.partners['stringDB medium'].append(converted_gene)
+                            else:
+                                self.partners['stringDB low'].append(converted_gene)
             with open(file, 'w') as f:
                 json.dump({db: list(self.partners[db]) for db in self.partners}, f)  # makes no difference downstream
         return self
@@ -436,12 +367,12 @@ class Protein(_UniprotMixin):
     def fetch_ENSP(self):
         """EMBL ids should vome from the Unirpto entry. However, in some cases too many it is absent."""
         for row in self.settings.open('ensembl'):
-            if self.gene in row:
+            if self.gene_name in row:
                 if row.count(' ') > 5:
                     self.ENSP = row.split()[5]
                 break
         else:
-            warn('Unknown Ensembl protein id for ' + self.gene)
+            warn('Unknown Ensembl protein id for ' + self.gene_name)
         return self
 
 
@@ -481,58 +412,32 @@ class Protein(_UniprotMixin):
                 self.pLI = float(line['pLI'])  # intolerant of a single loss-of-function variant (like haploinsufficient genes, observed ~ 0.1*expected)
                 self.pRec = float(line['pRec'])  # intolerant of two loss-of-function variants (like recessive genes, observed ~ 0.5*expected)
                 self.pNull = float(line['pNull'])  # completely tolerant of loss-of-function variation (observed = expected)
+                self.log('pLI: {pLI}, pRec {pRec}, pNull {pNull}'.format(**line))
                 break
         else:
-            warn('Gene {} not found in ExAC table.'.format(self.gene))
+            msg = 'Gene {} not found in ExAC table.'.format(self.gene_name)
+            warn(msg)
+            self.log(msg)
         return self
 
     @_failsafe
-    def get_ExAC(self):
-
-        def parse(line):
-            data = dict(zip(['CHROM', 'POS', 'ID', 'REF', 'ALT', 'QUAL', 'FILTER', 'INFO'], line.split('\t')))
-            # unpack info
-            info = {x.split('=')[0]: x.split('=')[1] for x in data['INFO'].split(';') if '=' in x}
-            del data['INFO']
-            # definitions were taken from the .vep.vcf
-            csq = dict(zip(
-                'Allele|Consequence|IMPACT|SYMBOL|Gene|Feature_type|Feature|BIOTYPE|EXON|INTRON|HGVSc|HGVSp|cDNA_position|CDS_position|Protein_position|Amino_acids|Codons|Existing_variation|ALLELE_NUM|DISTANCE|STRAND|FLAGS|VARIANT_CLASS|MINIMISED|SYMBOL_SOURCE|HGNC_ID|CANONICAL|TSL|APPRIS|CCDS|ENSP|SWISSPROT|TREMBL|UNIPARC|GENE_PHENO|SIFT|PolyPhen|DOMAINS|HGVS_OFFSET|GMAF|AFR_MAF|AMR_MAF|EAS_MAF|EUR_MAF|SAS_MAF|AA_MAF|EA_MAF|ExAC_MAF|ExAC_Adj_MAF|ExAC_AFR_MAF|ExAC_AMR_MAF|ExAC_EAS_MAF|ExAC_FIN_MAF|ExAC_NFE_MAF|ExAC_OTH_MAF|ExAC_SAS_MAF|CLIN_SIG|SOMATIC|PHENO|PUBMED|MOTIF_NAME|MOTIF_POS|HIGH_INF_POS|MOTIF_SCORE_CHANGE|LoF|LoF_filter|LoF_flags|LoF_info|context|ancestral'.split(
-                    '|'), info['CSQ'].split('|')))
-            del info['CSQ']
-            return {**data, **info, **csq}
-
-        if self.pLI == -1:  # No ExAC name so don't bother.
-            return
-        file = os.path.join(self.settings.ExAC_folder, self.uniprot + '_ExAC.vcf')
-        matches = []
-        if os.path.isfile(file):
-            self.log('Reading from cached _ExAC.vcf file')
-            matches = list(open(file))
+    def parse_gNOMAD(self):
+        # preparsed.
+        # from protein.generate.split_gNOMAD import gNOMAD
+        # gNOMAD().write('gNOMAD')
+        file = os.path.join(self.settings.temp_folder, 'gNOMAD', self.uniprot +'.json')
+        if os.path.exists(file):
+            self.gNOMAD = json.load(open(file))
         else:
-            self.log('Parsing ExAC.r1.sites.vep.vcf')
-            # out.write('#CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO')
-            gmatch = '|{}|'.format(self.gene)
-            with self.settings.open('ExAC_vep') as fh:
-                for line in fh:
-                    if line and line[0] != '#' and gmatch in line:
-                        matches.append(line)
-                        # data = parse(line)
-            with open(file, 'w') as out:
-                out.writelines(matches)
-            self.log('... {} Matches found'.format(len(matches)))
-        # parse entries. Oddly some are incorrect if the gene happens to be potentially ambiguous.
-        parsed = [parse(line) for line in matches]
-        self.alleles = [x for x in parsed if x['SYMBOL'] == self.gene]
-        if self.alleles:
-            self.ENSG = self.alleles[0]['Gene']
-        verdict_list = [self.verify_allele(a) for a in self.iter_allele()]
-        verdict_sum = sum(verdict_list)
-        verdict_len = len(verdict_list)
-        if verdict_len and verdict_sum / verdict_len > 0.8:
-            self.log('ExAC data usable. There are {s} valid out of {l}'.format(s=verdict_sum, l=verdict_len))
-        else:
-            self.log('ExAC data cannot be integrated. There are {s} valid out of {l}'.format(s=verdict_sum, l=verdict_len))
-            self.alleles = []  # no ExAC.
+            self.gNOMAD = []
+            warn('No gNOMAD data from {0} {1}?'.format(self.gene_name, self.uniprot))
+        self.log('gNOMAD mutations: {0}'.format(len(self.gNOMAD)))
+        return self
+
+
+
+
+
 
     def iter_allele(self, filter=True, consequence=None, split=True):
         """
@@ -596,7 +501,7 @@ class Protein(_UniprotMixin):
         txt_candidate = os.path.join(self.settings.manual_folder, self.uniprot + '.md')
         if os.path.isfile(txt_candidate):
             txt = txt_candidate
-        elif self.gene in man and man[self.uniprot]['Text']:
+        elif self.gene_name in man and man[self.uniprot]['Text']:
             txt_candidate = os.path.join(self.settings.manual_folder, man[self.uniprot]['Text'])
             if os.path.isfile(txt_candidate):
                 txt = txt_candidate
@@ -618,45 +523,18 @@ class Protein(_UniprotMixin):
         # done
         return self
 
-    @_failsafe
-    def match_pdb(self):
-        # variable self.matched_pdbs not used...
-        file = os.path.join(self.settings.pdb_blast_folder, self.uniprot + '_blastPDB.xml')
-        if os.path.isfile(file):
-            pass
-        else:
-            raise Exception('This is impossible. Preparsed.') #todo make a settings flag for this
-            self._assert_fetchable(self.gene + ' PDB match')
-            self.log('Blasting against PDB dataset of NCBI')
-            result_handle = NCBIWWW.qblast("blastp", "pdb", self.seq)  # the whole sequence.
-            open(file, "w").write(result_handle.read())
-        blast_record = NCBIXML.read(open(file))
-        # Parse!
-        matches = []
-        for align in blast_record.alignments:
-            for hsp in align.hsps:
-                if hsp.score > 100:
-                    d = {'match': align.title[0:50], 'match_score': hsp.score, 'match_start': hsp.query_start, 'match_length': hsp.align_length, 'match_identity': hsp.identities / hsp.align_length}
-                    self.pdb_matches.append(d)
-                    #if hsp.query_start < self.resi < hsp.align_length + hsp.query_start:
-
-                    # self.pdb_resi=self.resi+(hsp.sbjct_start-hsp.query_start) #this is a massive pickle as the NCBI pdb data has different numbering.
-        if matches:
-            self.log('GENE MUTANT WITHIN CRYSTAL STRUCTURE!!')
-            # mostly based on identity, but if a long one exists and it is only marginally worse the go for that.
-            best = sorted(matches, key=lambda m: m['match_length'] * m['match_identity'] ** 3, reverse=True)[0]
-            for k in best:
-                setattr(self, k, best[k]) #forgot what the hell this is!
-        else:
-            self.log('UNCRYSTALLISED MUTATION')
-        return self
-
     def parse_all(self, mode='parallel'):
         """
         Gets all the data. if running in parallel see self._threads list.
         :param mode: parallel | background (=parallel but not complete) | serial (or anything else)
         :return:
         """
+        ### Sanity check
+        assert self.gene_name, 'There is no gene name'
+        if not self.uniprot:
+            warn('There is no uniprot value in this entry!')
+            self.uniprot = json.load(open(os.path.join(self.settings.data_folder,'human_prot_namedex.json')))[self.gene_name]
+        ### fetch!
         tasks = {'Uniprot': self.parse_uniprot, #done.
                  'PFam': self.parse_pfam, #done.
                  'ELM': self.query_ELM,
@@ -665,7 +543,7 @@ class Protein(_UniprotMixin):
                  'manual': self.add_manual_data,
                  #'GO terms': self.fetch_go,
                  'Binding partners': self.fetch_binders}
-        tasks = {'Uniprot': self.parse_uniprot} #TODO remove skippage
+        #tasks = {'Uniprot': self.parse_uniprot}
         if mode in ('parallel','background'):
             threads = {}
             for k, fn in tasks.items():
@@ -683,10 +561,6 @@ class Protein(_UniprotMixin):
             for task_fn in tasks.values():
                 task_fn()
         return self
-
-    def predict_effect(self):
-        pass
-        ##TOdo write>!
 
     #to do fix
     def parse_ExAC_type(self):
@@ -713,56 +587,55 @@ class Protein(_UniprotMixin):
                 self.parse_ExAC_type()
                 break
         else:
-            warn('Gene {} not found in ExAC table.'.format(self.gene))
+            warn('Gene {} not found in ExAC table.'.format(self.gene_name))
         return self
 
 
-    ## depraction zone.
-    def write(self, file=None):
-        raise Exception('DEPRACATED. use write_uniprot')
+    def parse_swissmodel(self):
+        models=json.load(self.settings.open('swissmodel'))['index']
+        for model in models:
+            if self.uniprot == model['uniprot_ac']:
+                self.swissmodel.append({'x': model['from'],
+                                        'y': model['to'],
+                                        'id': model['coordinate_id'],
+                                        'description': '{template} ({seqid}%)'.format(**model),
+                                        'url': model['url']})
+        self.log('Swissmodel has {0} models.'.format(len(self.swissmodel)))
+        return self
+
+
+    def get_percent_modelled(self):
+        """Returns the [0,1] fraction of the protein length that is modelled (repeats arent recounted)"""
+
+        def clean(text):
+            return int(text.lstrip().replace('-', ' ').replace(',', ' ').split(' ')[0]) - 1
+
+        try:
+            if len(self) == 0:
+                return 0
+            state = [False for i in range(len(self))]
+            for dataset in (self.swissmodel,self.pdbs):
+                for model in dataset:
+                    for i in range(clean(model['x']),clean(model['y'])):
+                        state[i]=True
+            self.percent_modelled = sum(state)/len(self)
+        except:
+            self.percent_modelled = 0
+        return self.percent_modelled
+
+    def parse_pdb_blast(self):
+        file = os.path.join(self.settings.temp_folder, 'blastpdb2', self.uniprot + '.json')
+        if os.path.exists(file):
+            self.pdb_matches = json.load(open(file))
+        else:
+            warn('No PDB blast data from {0} {1}?'.format(self.gene_name, self.uniprot))
+        return self
+
+
 
     @_failsafe
     def _test_failsafe(self):
         raise ValueError('Will failsafe catch it? ({})'.format(self.settings.error_tollerant))
-
-    def check_mutation(self, mutation):
-        if len(self.sequence) > mutation.residue_index and self.sequence[mutation.residue_index - 1] == mutation.from_residue:
-            return True
-        else:
-            return False # call mutation_discrepancy to see why.
-
-    def mutation_discrepancy(self, mutation):
-        # returns a string explaining the check_mutation discrepancy
-        neighbours=''
-        if len(self.sequence) < mutation.residue_index:
-            return 'Uniprot {g} is {l} amino acids long, while user claimed a mutation at {i}.'.format(
-                g=self.uniprot,
-                i=mutation.residue_index,
-                l=len(self.sequence)
-                )
-        else:
-            if mutation.residue_index < 5:
-                neighbours = '{pre}*{i}*{post}'.format(pre=self.sequence[:mutation.residue_index-1],
-                                                       i=self.sequence[mutation.residue_index-1],
-                                                       post=self.sequence[mutation.residue_index:mutation.residue_index+5])
-            elif mutation.residue_index > 5 and len(self.sequence) > mutation.residue_index + 5:
-                neighbours = '{pre}*{i}*{post}'.format(pre=self.sequence[mutation.residue_index - 6:mutation.residue_index - 1],
-                                                       i=self.sequence[mutation.residue_index - 1],
-                                                       post=self.sequence[mutation.residue_index:mutation.residue_index + 5])
-            elif len(self.sequence) < mutation.residue_index + 5:
-                neighbours = '{pre}*{i}*{post}'.format(pre=self.sequence[mutation.residue_index - 6:mutation.residue_index - 1],
-                                                       i=self.sequence[mutation.residue_index - 1],
-                                                       post=self.sequence[mutation.residue_index:])
-            else:
-                print('impossible?!')
-                neighbours = 'ERROR.'
-            return 'Residue {i} is {n} in Uniprot {g}, while user claimed it was {f}. (neighbouring residues: {s}'.format(
-                                                                            i=mutation.residue_index,
-                                                                            n=self.sequence[mutation.residue_index - 1],
-                                                                            g=self.uniprot,
-                                                                            f=mutation.from_residue,
-                                                                            s=neighbours
-                                                                            )
 
 
 class Mutation:

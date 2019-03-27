@@ -15,7 +15,7 @@
 ################ main
 
 
-<div class="card" id="input_card">
+<div class="card shadow-sm" id="input_card">
     <h3 class="card-header">Input new</h3>
     <div class="card-body">
         <div class="row">
@@ -44,14 +44,16 @@
             ### analyse button
             <div class="col-6 col-lg-3">
                 <div class="btn-group" role="group" aria-label="analyse">
-                    <button type="button" class="btn btn-primary" id="analyse">Analyse</button>
-                    <button type="button" class="btn btn-danger" id="reset">Reset</button>
+                    <button type="button" class="btn btn-outline-success" id="analyse">Analyse</button>
+                    <button type="button" class="btn btn-outline-danger" id="reset">Reset</button>
+                    <button type="button" class="btn btn-outline-info" id="demo">Demo</button>
                 </div>
             </div>
         </div>
     </div>
 </div>
-<div class="card mt-5" id="retrieval_card">
+
+<div class="card mt-5 shadow-sm" id="retrieval_card">
     <h3 class="card-header">Retrieve previous</h3>
     <div class="card-body">
         <p>This would be Session specific. Authentication? Alchemy SQLite DB included, but no models made.</p>

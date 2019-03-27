@@ -1,5 +1,5 @@
-# SNV analyser app
-web app that gathers data on a protein and predict the effect of a SNV.
+# VENUS (Variant Effect on Structure)
+A web app that gathers data on a protein and predict the effect of a SNV from a structural point of view.
 
 # Entrypoint
 There is a different entrypoint here.

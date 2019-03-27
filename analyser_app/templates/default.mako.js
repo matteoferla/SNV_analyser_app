@@ -1,4 +1,4 @@
-//### This is a Mako template but for a js. The suffix is so not to confuse PyCharm.
+//### This (default.mako.js is a Mako template but for a js. The suffix is so not to confuse PyCharm.
 window.invalidate = function (id) {
     $(id).removeClass('is-valid');
     $(id).addClass('is-invalid');
@@ -56,6 +56,13 @@ $('#reset').click(function () {
     $('#gene').val('');
     $('#mutation').val('');
     throw new Error("User requested halt");
+});
+
+$('#demo').click(function () {
+    $.ajax({type: 'POST',
+            url: 'get_random'}).done(function (msg) {
+        $('#gene').val(msg.name);
+    });
 });
 
 ops.statusCheck = function (data) {

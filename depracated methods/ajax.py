@@ -51,6 +51,12 @@ def mut_check_view(request):
         print(err)
         return {'error': str(err)}
 
+        if os.path.isfile(os.path.join('data', 'pickle', uniprot + '.p')) and 1==0: ### if there is already a pickle file, which theere should be eventually.
+            request.session['threads'] = dict()  ## this is an odd case.
+        else:
+            protein.parse_all(mode='background')
+
+
 
 @view_config(route_name='task_check', renderer="json")
 def status_check_view(request):
