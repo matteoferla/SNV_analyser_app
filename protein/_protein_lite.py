@@ -148,3 +148,19 @@ class ProteinLite:
                                                                             f=mutation.from_residue,
                                                                             s=neighbours
                                                                             )
+
+    def get_features_at_position(self, position):
+        return self.get_features_near_position(position,wobble=0)
+
+    def get_features_near_position(self, position, wobble=10):
+        ## dodgy position?
+        if isinstance(position,str):
+            position = int(position)
+        elif not isinstance(position,int):
+            position = position.residue_index
+        else:
+            position = position
+        ## deal with it.
+        valid = [{**f,'type': g} for g in self.features for f in self.features[g] if f['x'] - wobble < position < f['y'] + wobble]
+        return valid
+

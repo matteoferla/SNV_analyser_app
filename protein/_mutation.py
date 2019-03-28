@@ -407,9 +407,31 @@ class Mutation:
                 'Y>W': 'differently shaped',
                 'Y>Y': 'identical'}
 
-    names =(('A', 'Ala'), ('B', 'Asx'), ('C', 'Cys'), ('D', 'Asp'), ('E', 'Glu'), ('F', 'Phe'), ('G', 'Gly'), ('H', 'His'),
-            ('I', 'Ile'), ('K', 'Lys'), ('L', 'Leu'), ('M', 'Met'), ('N', 'Asn'), ('P', 'Pro'), ('Q', 'Gln'), ('R', 'Arg'),
-            ('S', 'Ser'), ('T', 'Thr'), ('V', 'Val'), ('W', 'Trp'), ('X', 'Xaa'), ('Y', 'Tyr'), ('Z', 'Glx'))
+    names =(('A', 'Ala', 'Alanine'),
+            ('B', 'Asx', 'Aspartate/asparagine'),
+            ('C', 'Cys', 'Cysteine'),
+            ('D', 'Asp', 'Aspartate'),
+            ('E', 'Glu', 'Glutamate'),
+            ('F', 'Phe', 'Phenylanine'),
+            ('G', 'Gly', 'Glycine'),
+            ('H', 'His', 'Histidine'),
+            ('I', 'Ile', 'Isoleucine'),
+            ('K', 'Lys', 'Lysine'),
+            ('L', 'Leu', 'Leucine'),
+            ('M', 'Met', 'Methionine'),
+            ('N', 'Asn', 'Asparagine'),
+            ('P', 'Pro', 'Proline'),
+            ('Q', 'Gln', 'Glutamine'),
+            ('R', 'Arg', 'Arginine'),
+            ('S', 'Ser', 'Serine'),
+            ('T', 'Thr', 'Threonine'),
+            ('U', 'Sel', 'Selenocysteine'),
+            ('V', 'Val', 'Valine'),
+            ('W', 'Trp', 'Tryptophan'),
+            ('X', 'Xaa', 'Any'),
+            ('Y', 'Tyr', 'Tyrosine'),
+            ('Z', 'Glx', 'Glutamate/glutamine'),
+            ('*','Stop', 'Stop'))
 
     aa_list = tuple('QWERTYIPASDFGHKLCVNM*')
 
@@ -432,7 +454,7 @@ class Mutation:
         assert mutation.find('.c') == -1, 'Chromosome mutation not accepted. Use Protein.'
         # remove the p.
         mutation = mutation.replace('p.', '').replace('P.', '')
-        for (single, triple) in self.names:
+        for (single, triple, full) in self.names:
             if mutation.find(triple) != -1 or mutation.find(triple.lower()) != -1 or mutation.find(triple.upper()):
                 mutation = mutation.replace(triple, single).replace(triple.upper(), single).replace(triple.lower(), single)
         self.mutation = mutation
@@ -489,6 +511,10 @@ class Mutation:
                                   ', '.join(self._apriori_data[self.from_residue+'>'+self.to_residue].split('|'))+\
                                   '.'
         return self
+
+    @classmethod
+    def long_name(cls, letter):
+        return ['{n} ({s}, {t})'.format(n=n,s=s,t=t) for s, t, n in cls.names if s == letter][0]
 
 
 

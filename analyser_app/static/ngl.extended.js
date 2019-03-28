@@ -1,3 +1,4 @@
+NGL.specialOps = {'note': `This is a monkeypatch to allow HTML control of the structure using the markup defined in ngl.matteoferla.com/markup
 /* This script adds to NGL the following...
 
 * NGL.stageIds an object taht stores id: stages
@@ -18,12 +19,13 @@
 ** NGL.Stage.prototype.removeComponentsbyName array version.
 ** NGL.Stage.prototype.removeClashes removes clashes and the rotation.
 * $.prototype.protein to enable a link
-NB. this file ends with `$('[data-toggle="protein"]').protein();` to activate all links.
+NB. this file ends with $('[data-toggle="protein"]').protein(); to activate all links.
 
 proteins is an array of {name: 'unique_name', type: 'rcsb' (default) | 'file' | 'data', value: xxx, 'ext': 'pdb' (default), loadFx: xxx}
 where the optional loadFx is a function that is run on loading.
-*/
+`};
 
+NGL.specialOps.version = '0.3.0';
 
 NGL.stageIds = {};
 
@@ -56,8 +58,6 @@ NGL.getStage = function (id) {
 };
 
 ///////////////////////////// NGL.SpecialOps ///////////////
-
-NGL.specialOps = {'note': 'This is a monkeypatch to allow HTML control of the structure using the markup defined in ngl.matteoferla.com/markup'};
 
 NGL.specialOps.slowOrient = function (id, view) {
     //wrapper for a string view.
@@ -123,14 +123,6 @@ NGL.specialOps.showResidue = function (id, selection, color, radius, view) {
         protein.autoView(atomSet2.toSeleString(), 2000);
         }
     };
-
-NGL.specialOps.hardReset = function () {  //when the page is faux-refreshed.
-    Object.entries(NGL.stageIds).forEach(([k,v]) => $('#'+k).children().detach());
-    window.myData = undefined;
-    NGL.stageIds = {};
-    window.stage = undefined;
-    console.log('HARD RESET.');
-};
 
 NGL.specialOps.showClash = function (id, selection, color, radius, tolerance, view) {
     // Prepare
@@ -206,6 +198,14 @@ NGL.specialOps.showBlur = function (id,selection, color, radius, view) {
         else {
         protein.autoView(2000);
         }
+};
+
+NGL.specialOps.hardReset = function () {  //when the page is faux-refreshed.
+    Object.entries(NGL.stageIds).forEach(([k,v]) => $('#'+k).children().detach());
+    window.myData = undefined;
+    NGL.stageIds = {};
+    window.stage = undefined;
+    console.log('HARD RESET.');
 };
 
 NGL.specialOps.removeImg = function () {
@@ -320,6 +320,8 @@ NGL.specialOps.multiLoader = function (id, proteins, backgroundColor, startIndex
     startIndex = startIndex || 0;
     console.log('starting multiloader');
     console.log(proteins);
+    // prevent body scrolling
+    NGL.specialOps._preventScroll(id);
     // check for awkard case it has already been started.
     if (typeof window.myData === 'object') {window.myData.proteins.push(...proteins);}
     else {window.myData={current_index: -1, proteins: proteins, id: id, backgroundColor: backgroundColor || 'white'};}
@@ -335,7 +337,20 @@ NGL.specialOps.postInitialise = function () {
     if (typeof window.myData === "undefined") {
         console.log('WARNING. initilise the scene with NGL.specialOps.multiLoader!');
         window.myData={current_index: -1, proteins: [], id: 'viewport', backgroundColor: 'white'};
+        NGL.specialOps._preventScroll('viewport');
     }
+};
+
+NGL.specialOps._preventScroll = function (id) {
+    $('#'+id).on( 'mousewheel DOMMouseScroll', function ( e ) {
+            var e0 = e.originalEvent,
+                delta = e0.wheelDelta || -e0.detail;
+            this.scrollTop += ( delta < 0 ? 1 : -1 ) * 30;
+            e.preventDefault();
+        });
+    // fix weid overflow.
+    // something somewhere is adding an overflow hidden??
+    setTimeout(() => $('#'+myData.id).css('overflow','visible'),1000)
 };
 
 ///////////////////////////// NGL.Stage monkeypatching ///////////////
@@ -425,7 +440,6 @@ NGL.specialOps.prolink = function (prolink) { //prolink is a JQuery object.
     if (structure) {
         NGL.specialOps.load(structure).then(move);
     } else {move();}
-
 };
 
 $.prototype.protein = function (){
@@ -469,6 +483,7 @@ $.prototype.viewport = function () {
                     )}
             }
     };
+
 
 $(document).ready(function () {
     //activate prolinks

@@ -35,3 +35,13 @@ pre {
 .popover{
     max-width: 90vw; /* Max Width of the popover (depending on the container!) */
 }
+
+.prolink {
+	color: mediumseagreen;
+}
+
+.prolink:hover {
+	color: seagreen;
+	cursor: pointer;
+	text-decoration: underline;
+}
