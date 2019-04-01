@@ -3,6 +3,13 @@ from alembic import context
 from pyramid.paster import get_appsettings, setup_logging
 from sqlalchemy import engine_from_config
 
+
+
+
+### something is odd in Windows
+import sys, os
+sys.path.append(os.getcwd())
+
 ## convensions
 from analyser_app.models.meta import Base
 

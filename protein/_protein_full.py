@@ -48,7 +48,7 @@ class Protein(ProteinLite, _BaseMixin, _DisusedMixin, _UniprotMixin):
                 try:
                     return func(self, *args, **kargs)
                 except Exception as error:
-                    print('Error caught in method `Protein().{n}`: {e}'.format(n=func.__name__, e=error))
+                    warn('Error caught in method `Protein().{n}`: {e}'.format(n=func.__name__, e=error))
                     return None
             else:
                 return func(self, *args, **kargs)
@@ -212,8 +212,8 @@ class Protein(ProteinLite, _BaseMixin, _DisusedMixin, _UniprotMixin):
                     if len(protein_set) == 1:
                         self.partners['SSL'].append(protein_set.pop())
                     else:  # most likely a partial match. maybe???
-                        print('Impossible SSL '+row)
-                        print('{0} after discarding {1} erroneously became {2}'.format(protein_set, self.gene_name, set(row.split('\t')[:2])))
+                        warn('Impossible SSL '+row)
+                        warn('{0} after discarding {1} erroneously became {2}'.format(protein_set, self.gene_name, set(row.split('\t')[:2])))
             ###################### HURI cat.psi
             self.log('parsing HURI...')
             for row in self.settings.open('huri'):
@@ -226,14 +226,14 @@ class Protein(ProteinLite, _BaseMixin, _DisusedMixin, _UniprotMixin):
                         protein_set.discard(self.gene_name)
                         if len(protein_set) == 1:
                             self.partners['HuRI'].append(protein_set.pop())
-                        elif len(len(protein_set) == 0): ### multimeric
+                        elif len(protein_set) == 0: ### multimeric
                             pass
                         else:
-                            print('Impossible HURI ' + row)
-                            print('{0} after discarding {1} erroneously became {2}'.format(protein_set, self.gene_name, re.findall('\:(\w+)\(gene name\)', row)))
+                            warn('Impossible HURI ' + row)
+                            warn('{0} after discarding {1} erroneously became {2}'.format(protein_set, self.gene_name, re.findall('\:(\w+)\(gene name\)', row)))
 
                     else:
-                        print('Impossible HURI ' + row)
+                        warn('Impossible HURI ' + row)
             ###################### biogrid https://downloads.thebiogrid.org/Download/BioGRID/Release-Archive/BIOGRID-3.5.166/BIOGRID-ALL-3.5.166.mitab.zip
             self.log('parsing biogrid...')
             for row in self.settings.open('biogrid'):
@@ -422,7 +422,14 @@ class Protein(ProteinLite, _BaseMixin, _DisusedMixin, _UniprotMixin):
         # gNOMAD().write('gNOMAD')
         file = os.path.join(self.settings.temp_folder, 'gNOMAD', self.uniprot +'.json')
         if os.path.exists(file):
-            self.gNOMAD = json.load(open(file))
+            for snp in json.load(open(file)):
+                resi = int(snp['residue_index'].split('-')[0])
+                self.gNOMAD.append({'id': 'gNOMAD_{x}_{x}_{id}'.format(x=resi, id=snp['id']),
+                                    'description': '{from_residue}{residue_index}{to_residue} ({id})'.format(**snp),
+                                    'x': resi,
+                                    'y': resi,
+                                    'impact': snp['impact']
+                                    })
         else:
             self.gNOMAD = []
             warn('No gNOMAD data from {0} {1}?'.format(self.gene_name, self.uniprot))
@@ -525,19 +532,23 @@ class Protein(ProteinLite, _BaseMixin, _DisusedMixin, _UniprotMixin):
         :return:
         """
         ### Sanity check
-        assert self.gene_name, 'There is no gene name'
         if not self.uniprot:
             warn('There is no uniprot value in this entry!')
             self.uniprot = json.load(open(os.path.join(self.settings.data_folder,'human_prot_namedex.json')))[self.gene_name]
+        if not self.gene_name:
+            self.parse_uniprot()
         ### fetch!
         tasks = {'Uniprot': self.parse_uniprot, #done.
                  'PFam': self.parse_pfam, #done.
-                 'ELM': self.query_ELM,
+                 'Swissmodel': self.parse_swissmodel,
                  'pLI': self.parse_pLI,
-                 'ExAC': self.get_ExAC,
+                 'gNOMAD': self.parse_gNOMAD,
+                 'parse_pdb_blast': self.parse_pdb_blast,
                  'manual': self.add_manual_data,
-                 #'GO terms': self.fetch_go,
                  'Binding partners': self.fetch_binders}
+        #prot.get_percent_modelled()
+        #prot.parse_ExAC_type()
+        #prot.dump()
         #tasks = {'Uniprot': self.parse_uniprot}
         if mode in ('parallel','background'):
             threads = {}
@@ -593,7 +604,7 @@ class Protein(ProteinLite, _BaseMixin, _DisusedMixin, _UniprotMixin):
                 self.swissmodel.append({'x': model['from'],
                                         'y': model['to'],
                                         'id': model['coordinate_id'],
-                                        'description': '{template} ({seqid}%)'.format(**model),
+                                        'description': '{template} (id:{seqid:.0}%)'.format(**model),
                                         'url': model['url']})
         self.log('Swissmodel has {0} models.'.format(len(self.swissmodel)))
         return self

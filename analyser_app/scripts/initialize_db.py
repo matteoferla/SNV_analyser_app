@@ -8,12 +8,13 @@ from .. import models
 
 
 def setup_models(dbsession):
-    """
-    Add or update models / fixtures in the database.
+    editor = models.User(name='editor', role='editor')
+    editor.set_password('editor')
+    dbsession.add(editor)
 
-    """
-    model = models.mymodel.MyModel(name='one', value=1)
-    dbsession.add(model)
+    basic = models.User(name='basic', role='basic')
+    basic.set_password('basic')
+    dbsession.add(basic)
 
 
 def parse_args(argv):

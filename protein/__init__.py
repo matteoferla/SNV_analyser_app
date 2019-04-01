@@ -19,4 +19,3 @@ from ._mutation import Mutation
 
 from .ET_monkeypatch import ET #monkeypatched version
 from .settings_handler import global_settings
-

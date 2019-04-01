@@ -1,26 +1,18 @@
 <%inherit file="layout.mako"/>
 
 <%block name="topmost">
-    <section class="jumbotron text-center">
-        <div class="container">
-            <h1 class="jumbotron-heading">SNV analyser</h1>
-            <p class="lead text-muted">This tool gathers information from various sources about a gene and ranks possible effect a SNV may have.
-                <br/>(signal peptide loss, binding site, active site or ddG)</p>
-        </div>
-    </section>
+    <%include file="header.mako"/>
 </%block>
 
 
-
 ################ main
-
-
+<%block name="body">
 <div class="card shadow-sm" id="input_card">
     <h3 class="card-header">Input new</h3>
     <div class="card-body">
         <div class="row">
             ### gene
-            <div class="col-12 col-lg-6">
+            <div class="col-12 col-lg-5">
                 <div class="input-group mb-3">
         <div class="input-group-prepend">
             <label class="input-group-text" id="gene_label">Gene name </label>
@@ -56,7 +48,7 @@
 <div class="card mt-5 shadow-sm" id="retrieval_card">
     <h3 class="card-header">Retrieve previous</h3>
     <div class="card-body">
-        <p>This would be Session specific. Authentication? Alchemy SQLite DB included, but no models made.</p>
+        <p>Finish me.</p>
     </div>
 </div>
 
@@ -65,8 +57,20 @@
     <div class="card-body">
     </div>
 </div>
+</%block>
+
+
+############ modal
+<%block name="modals">
+    <%include file="login_modal.mako"/>
+</%block>
+
 
 ############ code
 <%block name="script">
-    <%include file="default.mako.js"/>
+    <%include file="main.js"/>
+    <%include file="login_modal.js"/>
+
+
+
 </%block>

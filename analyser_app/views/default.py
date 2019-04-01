@@ -5,7 +5,17 @@ from sqlalchemy.exc import DBAPIError
 
 from .. import models
 
+from pyramid.httpexceptions import (
+    HTTPForbidden,
+    HTTPFound,
+    HTTPNotFound,
+    )
 
-@view_config(route_name='home', renderer='../templates/default.mako')
+
+@view_config(route_name='home', renderer='../templates/main.mako')
 def my_view(request):
-    return {'project': 'analyser_app', 'needs_tour': True, 'needs_feat': True, 'needs_ngl': True}
+    return {'project': 'Venus',
+            'needs_tour': True,
+            'needs_feat': True,
+            'needs_ngl': True,
+            'user': request.user}

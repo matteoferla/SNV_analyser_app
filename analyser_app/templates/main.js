@@ -40,7 +40,9 @@ ops.analyse = function (data)  {
             else {
                 $('#retrieval_card').hide(1000);
             $('#input_card').hide(1000);
-            $('main').append(msg);}
+            $('main').append(msg);
+            $('#new_analysis').show();
+            }
         })
         .fail(function () {
             ops.halt();

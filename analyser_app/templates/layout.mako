@@ -81,6 +81,8 @@
 % endif
 
 
+<%block name="modals"/>
+
 ################################################################################################################################################
 ################################################################################################################################################
 
@@ -127,7 +129,32 @@
 <script type="text/javascript">
     $( document).ready(function () {
         <%block name="script"/>
+
+        window.set_username = function (name, icon, quietly) {
+        icon = icon || 'user';
+        if (! name) {name = '<i>Guest</i>'; icon = 'user-secret'}
+        $("#user").html('<span id="user"><a href="#" class="text-light" data-toggle="modal" data-target="#login"><i class="far fa-'+icon+'"></i> '+name+'</a></span>');
+        if (! quietly) {
+            $("#user").animate({fontSize: '3em'}, "fast").animate({fontSize: '1em'}, "slow");}
+        };
+
+        //__init__
+        %if user:
+            $('#login-content').hide();
+            $('#logout-content').show();
+            $("#username-name").text("${user.name}");
+            $("#username-rank").text("${user.role}");
+            %if user.role == 'admin':
+                set_username("${user.name}", 'user-crown', true);
+            %else:
+                set_username("${user.name}", null, true);
+            %endif
+        %else:
+            set_username(null, null, true);
+        %endif
     });
+
+
 </script>
 
 

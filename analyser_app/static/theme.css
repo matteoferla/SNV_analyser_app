@@ -45,3 +45,37 @@ pre {
 	cursor: pointer;
 	text-decoration: underline;
 }
+:root {
+    --oxford:#001c54;
+}
+.bg-oxford {
+    background-color: var(--oxford)!important;
+}
+
+.oxford {
+    color: var(--oxford)!important;
+}
+
+.arrow-right {
+    right:-30px;
+    top: 140px;
+    position: absolute;
+    width: 0;
+    z-index:1000;
+    height: 0;
+    border-top: 30px solid transparent;
+    border-bottom: 30px solid transparent;
+    border-left: 30px solid rgba(0, 0, 0, 0.125);
+}
+
+.arrow-right2 {
+    right:-29px;
+    top: 140px;
+    position: absolute;
+    width: 0;
+    z-index:1001;
+    height: 0;
+    border-top: 30px solid transparent;
+    border-bottom: 30px solid transparent;
+    border-left: 30px solid white;
+}

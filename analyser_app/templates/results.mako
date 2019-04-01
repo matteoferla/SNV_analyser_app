@@ -1,17 +1,31 @@
 <%page args="protein, home=''"/>
 
 <div class="container-fluid" id="results">
+    <div style="width:47vw; position:fixed; top:7rem; bottom: 24px; right: 24px;">
+                    <div class="card shadow-sm">
+                        <div class="card-header"><h5 class="card-title">
+                            <i class="far fa-cubes"></i> Structure
+                        </h5></div>
+                      <div class="card-body">
+                        <div id="viewport" style="width:100%; height: 0; padding-bottom: 100%;">
+                            <button type="button"
+                                    class="btn btn-outline-secondary rounded-circle bg-white"
+                                    style="position:absolute; top:4.5rem; right:10px; z-index:1001"
+                                    id="viewport_menu_popover"
+                                    data-toggle="popover"
+                                            data-html="true"
+                                            data-trigger="manual"
+                                            data-title="Options"
+                                            data-content='To do. Plug me in with stuff stolen from Cosmic3D'>
+                                <b>&nbsp;<i class="far fa-ellipsis-v"></i>&nbsp;</b>
+                            </button>
+                        </div>
+                      </div>
+                    </div>
+                </div>
     <div class="row">
-        <!-- sidebar -->
-        <div class="col-md-2 d-flex flex-column">
-            <a class="btn btn-success" id="new_analysis"><i class="far fa-search"></i> New query</a>
-            <a class="btn btn-info" id="guide"><i class="far fa-compass"></i> Guided Tour</a>
-            <a class="btn btn-dark text-muted"><i class="far fa-dumpster-fire"></i> etc</a>
-        </div>
-        <div class="col-md-10">
-            <div class="row">
                 <!-- Main text -->
-                <div class="col-md-12 mb-4">
+                <div class="col-6 mb-4 pl-4">
                     <div class="card shadow-sm">
                         <div class="card-header"><h3 class="card-title">
                             ${protein.gene_name} ${mutation}
@@ -35,6 +49,8 @@
                         ###################### lines ###################################
 
                       <div class="card-body">
+                          <div class="arrow-right"></div><div class="arrow-right2">
+                          </div>
                       <ul class="list-group list-group-flush">
 
                           ###################### simple ###################################
@@ -88,8 +104,10 @@
                       </div>
                       </div>
                     </div>
+    </div>
+    <div class="row">
                 <!-- Feature -->
-                <div class="col-md-7">
+                <div class="col-6 mb-4 pl-4">
                     <div class="card shadow-sm">
                         <div class="card-header"><h5 class="card-title">
                             <i class="far fa-dna"></i> Features
@@ -101,28 +119,7 @@
                         ## todo move to stylesheet.
 
                       <div class="card-body">
-                        <div style="
-                            right:-30px;
-                            top: 140px;
-                            position: absolute;
-                            width: 0;
-                            z-index:1000;
-                            height: 0;
-                            border-top: 30px solid transparent;
-                            border-bottom: 30px solid transparent;
-                            border-left: 30px solid rgba(0, 0, 0, 0.125);">
-                        </div>
-                          <div style="
-                            right:-29px;
-                            top: 140px;
-                            position: absolute;
-                            width: 0;
-                            z-index:1000;
-                            height: 0;
-                            border-top: 30px solid transparent;
-                            border-bottom: 30px solid transparent;
-                            border-left: 30px solid white;">
-                        </div>
+                        <div class="arrow-right"></div><div class="arrow-right2"></div>
 
                           ###################### end of arrow ###################################
 
@@ -130,32 +127,7 @@
                       </div>
                     </div>
                 </div>
-                <!-- strucutre -->
-                <div class="col-md-5">
-                    <div class="card shadow-sm">
-                        <div class="card-header"><h5 class="card-title">
-                            <i class="far fa-cubes"></i> Structure
-                        </h5></div>
-                      <div class="card-body">
-                        <div id="viewport" style="width:100%; height: 0; padding-bottom: 100%;">
-                            <button type="button"
-                                    class="btn btn-outline-secondary rounded-circle bg-white"
-                                    style="position:absolute; top:4.5rem; right:10px; z-index:1001"
-                                    id="viewport_menu_popover"
-                                    data-toggle="popover"
-                                            data-html="true"
-                                            data-trigger="manual"
-                                            data-title="Options"
-                                            data-content='To do. Plug me in with stuff stolen from Cosmic3D'>
-                                <b>&nbsp;<i class="far fa-ellipsis-v"></i>&nbsp;</b>
-                            </button>
-                        </div>
-                      </div>
-                    </div>
-                </div>
             </div>
-        </div>
-    </div>
 </div>
 
 
