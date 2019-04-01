@@ -4,6 +4,9 @@ from pyramid import testing
 
 import transaction
 
+from .views.default import my_view
+from .models import User
+
 
 def dummy_request(dbsession):
     return testing.DummyRequest(dbsession=dbsession)
@@ -45,24 +48,25 @@ class TestMyViewSuccessCondition(BaseTest):
     def setUp(self):
         super(TestMyViewSuccessCondition, self).setUp()
         self.init_database()
+        admin = User(name='admin', role='admin')
+        admin.set_password('admin')
+        self.session.add(admin)
 
-        from .models import User
-
+    def test_passing_view(self):
+        request = dummy_request(self.session)
         basic = User(name='Bob', role='builder')
         basic.set_password('fixit')
         self.session.add(basic)
-
-    def test_passing_view(self):
-        from .views.default import my_view
-        info = my_view(dummy_request(self.session))
-        print(info)
-        self.assertEqual(info['Bob'].name, 'Bob')
-        self.assertEqual(info['project'], 'analyser_app')
+        request.user = basic
+        info = my_view(request)
+        self.assertEqual(info['user'].name, 'Bob')
+        self.assertEqual(info['project'], 'Venus')
 
 
 class TestMyViewFailureCondition(BaseTest):
 
     def test_failing_view(self):
-        from .views.default import my_view
-        info = my_view(dummy_request(self.session))
+        request = dummy_request(self.session)
+        request.user = None
+        info = my_view(request)
         self.assertEqual(info.status_int, 500)

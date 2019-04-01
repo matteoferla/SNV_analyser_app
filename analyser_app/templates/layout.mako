@@ -64,7 +64,9 @@
 </div>
 
 <main role='main' class="container-fluid w-100 mx-0 px-0">
-    <%block name="topmost"/>
+    <%block name="topmost">
+        <%include file="header.mako"/>
+    </%block>
     <div class="row mt-10">
         <div class="col-lg-8 offset-lg-2">
             ${ next.body() }
@@ -82,6 +84,7 @@
 
 
 <%block name="modals"/>
+<%include file="login_modal.mako"/>
 
 ################################################################################################################################################
 ################################################################################################################################################
@@ -129,7 +132,10 @@
 <script type="text/javascript">
     $( document).ready(function () {
         <%block name="script"/>
+        <%include file="login_modal.js"/>
 
+
+        ///////// username
         window.set_username = function (name, icon, quietly) {
         icon = icon || 'user';
         if (! name) {name = '<i>Guest</i>'; icon = 'user-secret'}

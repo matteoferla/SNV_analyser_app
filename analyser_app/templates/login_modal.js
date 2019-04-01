@@ -39,6 +39,12 @@ $('#login-btn,#register-btn,#logout-btn').click( function () {
                 if (msg.responseJSON.status === 'wrong username') {
                     $('#username').addClass('is-invalid');
                     $('#username_error').show();
+                    $('#username_error').html('The username is invalid');
+                }
+                if (msg.responseJSON.status === 'existing username') {
+                    $('#username').addClass('is-invalid');
+                    $('#username_error').show();
+                    $('#username_error').html('The username already exists');
                 }
                 else if (msg.responseJSON.status === 'wrong password') {
                     $('#password').addClass('is-invalid');

@@ -1,8 +1,6 @@
 <%inherit file="layout.mako"/>
 
-<%block name="topmost">
-    <%include file="header.mako"/>
-</%block>
+
 
 
 ################ main
@@ -62,15 +60,10 @@
 
 ############ modal
 <%block name="modals">
-    <%include file="login_modal.mako"/>
 </%block>
 
 
 ############ code
 <%block name="script">
     <%include file="main.js"/>
-    <%include file="login_modal.js"/>
-
-
-
 </%block>

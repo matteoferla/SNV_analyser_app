@@ -11,7 +11,7 @@ from pyramid.httpexceptions import (
     HTTPNotFound,
     )
 
-
+@view_config(route_name='admin', renderer='../templates/admin.mako')
 @view_config(route_name='home', renderer='../templates/main.mako')
 def my_view(request):
     return {'project': 'Venus',
