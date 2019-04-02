@@ -10,11 +10,21 @@ from pyramid.security import (
     forget,
     )
 
+import re
+
+def sanitise_text(text):
+    nasty = '[\x00\|\-\*\/\<\>\,\=\<\>\~\!\^\(\)\'\"]'
+    value = re.sub(nasty,'', text)
+    if len(value) == 0:
+        return 'blank'
+    return value
+
+
 @view_config(route_name='login', renderer="json")
 def login_view(request):
     action   = request.params['action']
-    username = request.params['username']
-    password = request.params['password']
+    username = sanitise_text(request.params['username'])
+    password = sanitise_text(request.params['password'])
     print('login_view', action)
     user = request.dbsession.query(User).filter_by(name=username).first()
     if action == 'login':
@@ -50,6 +60,17 @@ def login_view(request):
             target.role = 'admin'
             request.dbsession.add(target)
             return {'status': 'promoted'}
+    elif action == 'kill':
+        if request.user and request.user.role == 'admin': ##only admins have a licence to kill
+            target=request.dbsession.query(User).filter_by(name=username).one()
+            request.dbsession.delete(target)
+            return {'status': 'deleted'}
+    elif action == 'reset':
+        if request.user and request.user.role == 'admin': ##only admins can reset the password
+            target=request.dbsession.query(User).filter_by(name=username).one()
+            target.set_password('password')
+            request.dbsession.add(target)
+            return {'status': 'reset'}
     else:
         request.response.status = 400
         return {'status': 'unknown request'}

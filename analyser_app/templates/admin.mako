@@ -1,5 +1,6 @@
 <%inherit file="layout.mako"/>
 
+<%block name="main">
 % if user and user.role == 'admin':
     <%
         from analyser_app.models import User
@@ -7,18 +8,22 @@
     %>
     <div class="card w-100 m-10">
         <div class="card-header">
-                <h5 class="card-title">Admin console</h5>
+                <h3 class="card-title">Admin console</h3>
             </div>
       <div class="card-body">
           <p class="card-text">
               There are ${len(users)} regististered users.
               <ul class="fa-ul">
                 %for u in users:
+                    <li data-user="${u.name}">
+                        <a href="#mod" data-toggle="modal" data-target="#mod" data-user="${u.name}">
+                        <span class="fa-li" >
                     %if u.role == 'admin':
-                        <li><span class="fa-li" ><i class="far fa-user-crown"></i></span> ${u.name}</li>
+                        <i class="far fa-user-crown"></i>
                     %else:
-                        <li><span class="fa-li" ><i class="far fa-user"></i></span> ${u.name} <buttom role="button" class="btn btn-outline-info btn-sm" data-toggle="user" data-target="${u.name}"><i class="far fa-crown"></i> make admin</buttom></li>
+                        <i class="far fa-user"></i>
                     %endif
+                    </span> ${u.name} </a></li>
                 %endfor
               </ul>
           </p>
@@ -32,7 +37,42 @@
   </div>
 </div>
 % endif
+</%block>
+
+
+
+<%block name="modals">
+    <div class="modal" tabindex="-1" role="dialog" id="mod">
+      <div class="modal-dialog" role="document">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title">ERROR</h5>
+            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+              <span aria-hidden="true">&times;</span>
+            </button>
+          </div>
+          <div class="modal-body">
+            <p>Error ah!</p>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-primary" id="mod-save">Save changes</button>
+            <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+          </div>
+        </div>
+      </div>
+    </div>
+</%block>
+
+
+
+
+
+
+
+
 
 <%block name="script">
-    <%include file="admin.js"/>
+    % if user and user.role == 'admin':
+        <%include file="admin.js"/>
+    %endif
 </%block>
