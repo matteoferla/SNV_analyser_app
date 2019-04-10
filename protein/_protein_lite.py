@@ -216,21 +216,24 @@ class ProteinLite:
             w = self._rex_elm(neighbours, r['Regex'])
             m = self._rex_elm(mut_neighbours, r['Regex'])
             if w != False or m != False:
-                match = {'status': 'TBD',
-                         'x': w[0]+position-10,
-                         'y': w[1]+position-10,
-                         'name': r['FunctionalSiteName'],
+                match = {'name': r['FunctionalSiteName'],
                          'description': r['Description'],
                          'regex': r['Regex'],
                          'probability': float(r['Probability'])}
                 if w != False and m != False:
+                    match['x'] = w[0] + position - 10
+                    match['y'] = w[1] + position - 10
                     match['status'] = 'kept'
                 elif w !=False and m == False:
+                    match['x'] = w[0] + position - 10
+                    match['y'] = w[1] + position - 10
                     match['status'] = 'lost'
                 else:
+                    match['x'] = m[0] + position - 10
+                    match['y'] = m[1] + position - 10
                     match['status'] = 'gained'
                 results.append(match)
-        self.mutation.elm = sorted(results,key= lambda m: m['probability'] + int(m['status'] != 'kept'))
+        self.mutation.elm = sorted(results,key= lambda m: m['probability'] + int(m['status'] == 'kept'))
         return self
 
 
