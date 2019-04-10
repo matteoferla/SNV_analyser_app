@@ -45,6 +45,17 @@ pre {
 	cursor: pointer;
 	text-decoration: underline;
 }
+
+.undelined {
+    text-decoration: underline;
+    text-decoration-style: dotted;
+}
+
+.undelined:hover {
+    text-decoration: underline;
+    text-decoration-style: solid;
+}
+
 :root {
     --oxford:#001c54;
 }

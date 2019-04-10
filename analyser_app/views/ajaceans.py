@@ -61,10 +61,10 @@ def analyse_view(request):
             return error_response(protein.mutation_discrepancy(mutation))
         ### wait for all to finish
         protein.complete()
-        protein.mutation=mutation
-        protein.predict_effect()
+        protein.predict_effect(mutation)
+        print(protein.mutation.elm)
         request.session['status']['step'] = 'complete'
-        return {'protein': protein, 'mutation': mutation}
+        return {'protein': protein, 'mutation': protein.mutation}
     except NotImplementedError as err:
         print('actual error')
         traceback.print_exc(limit=3, file=sys.stdout)

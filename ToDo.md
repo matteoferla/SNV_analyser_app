@@ -1,26 +1,16 @@
 # There is a lot to do...
 
-## Get a basic site up
-&#10003; Input and output
+## Urgent
 
-&#10003; concurrent Progress ajax. Implemented incorrectly: currently one ajax asks if the protein exists and if it does returns but also kicks off a parallel task. The checker ajax loops until the tasks are doen.
+* Rewrite ELM pattern searches (formerly ELM website requests)
+* Fix PDB analysis (surface/core, residue distance to phosphosites)
 
-&#10005; The backend is diabolically messy. Fix ajax to send a data check. On success send a long timeout request that does the hardwork and in parallel send quick status update ajax loop. _I.e._ have two concurrent ajax requests. The longer ajax means that the Session does not hold thread names that need to be awkwardly retrieved and the instance isn't JSON serialised.
+## Misc
+&#10005; Card to show more data if requested. Such as sequence.
 
-&#10005; Card to show predicted effect. And show all the data if requested. Such as sequence.
-
-&#10005; Train on known variants. How do I parse verbose human text? Keyword mining?
+&#10005; Idea. Train on known variants. How do I parse verbose human text? Keyword mining?
 
 ## Moving to Protein()
-&#10003; Parallelise.
-
-&#10005; Prepare. See "Prepare"
-
-&#10003; Detatch mutational data from protein.
-
-&#10005; Finish moving from `Tracker_analyser.Variant` to `protein.Protein` class (a cleaner and unlinked to tracker variant).
-
-&#10005; Rewrite Pfam to use Monkeypatched ET as opposed to the messy dictionary shortcut
 
 &#10005; Do something about Go and Tissue (vide infra)
 
@@ -34,14 +24,7 @@
 
 ## Preallocate
 
-&#10005; Run local Blast against PDB for the whole proteome. Everything is in place
-
 &#10005; Make models? See models.
-
-## Database
-
-&#10005; Users and such. Alchemy running.
-
 
 
 ## Models
@@ -63,7 +46,4 @@ These two have been removed. The former is rather useful in combination with the
 See depracted methods folder for the mssing methods.
 
 ## Tour
-Tour is not working. This has strong dejavu. It is not FeatureViewer's doing though!
-
-## Arrow
-It would be really nice having a chevron pointing from one card to the other.
+Reactivate/rewrite tour once complete.

@@ -90,6 +90,30 @@
                                 %endif
                           ${line_aft()}
 
+
+                          ###################### motifs ###################################
+                          % if mutation.elm:
+                            ${line_fore('Possible motifs')}
+                                <p>The following motifs span the nearby region:</p>
+                                <ul class="fa-ul">
+                                % for m in mutation.elm:
+                                    <li><span class="fa-li" >
+                                    %if m['status'] == 'kept':
+                                        <i class="far fa-info-circle"></i>
+                                    %else:
+                                        <i class="far fa-exclamation-triangle"></i>
+                                    %endif
+                                        </span>
+
+                                        Possible motif ${m['status']}: <span data-toggle="tooltip" title="${m['description']} (${m['regex']}, p = ${m['probability']})" class="undelined">${m['name']}</span>
+                                        <span class="prolink" data-target="viewport" data-toggle="protein" data-selection="${m['x']}-${m['y']}" data-focus="residue">(${m['x']}-${m['y']})</span>
+                                    </li>
+                                % endfor
+                                </ul>
+                              ${line_aft()}
+                          % endif
+
+
                           ###################### external ###################################
 
                         ${line_fore('External links')}

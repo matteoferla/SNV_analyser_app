@@ -290,6 +290,7 @@ $('#viewport_menu_popover')
 % endif
 
 $('#results [data-toggle="protein"]').protein();
+$('[data-toggle="tooltip"]').tooltip();
 
 $('#new_analysis').click(function () {
     NGL.specialOps.hardReset();
