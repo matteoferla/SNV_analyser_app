@@ -20,3 +20,4 @@ coverage
 test
 .sqlite
 *.sqlite
+analyser_app/alembic/versions/*.py
