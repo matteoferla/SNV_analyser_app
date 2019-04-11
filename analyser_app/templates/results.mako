@@ -32,7 +32,7 @@
                 <div class="col-6 mb-4 pl-4">
                     <div class="card shadow-sm">
                         <div class="card-header"><h3 class="card-title">
-                            ${protein.gene_name} ${mutation}
+                            ${protein.gene_name} ${mutation} <small>(${protein.recommended_name})</small>
                         </h3><h6 class="card-subtitle mb-2 text-muted">
                             Predicted effects
                         </h6></div>
