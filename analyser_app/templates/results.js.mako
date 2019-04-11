@@ -3,6 +3,8 @@
 //fix d3 version issue.
 //d3.scale={linear: d3.scaleLinear};
 
+myData = {currentIndex: -1, proteins: [], id: "viewport", backgroundColor: "white", currentChain: 'A'};
+
 ###################################################
 window.ft = new FeatureViewer('${protein.sequence}',
            '#fv',
@@ -184,7 +186,7 @@ $('.dsB').each(function () {
         var ad = id.split('_')[2];
         $(this).css('cursor', 'pointer');
         $(this).click(function () {
-            NGL.specialOps.showResidue('viewport', ab+':'+ops.current_chain+' or '+ad+':'+ops.current_chain);
+            NGL.specialOps.showResidue('viewport', ab+' or '+ad);
         });
     });
 
@@ -194,7 +196,7 @@ $('.domain').each(function () {
         var ad = id.split('_')[2];
         $(this).css('cursor', 'pointer');
         $(this).click(function () {
-            NGL.specialOps.showDomain('viewport', ab+'-'+ad+':'+ops.current_chain);
+            NGL.specialOps.showDomain('viewport', ab+'-'+ad);
         });
     });
 
@@ -202,10 +204,10 @@ $('.domain').each(function () {
 
 $('.variant,.modified,.our_SNP').each(function () {
         var id = $(this)[0].id;
-        var ab = id.split('_')[1] + ops.current_chain;
+        var ab = id.split('_')[1];
         $(this).css('cursor', 'pointer');
         $(this).click(function () {
-            NGL.specialOps.showResidue('viewport', ab+':'+ops.current_chain); //(id, selection, color, radius)
+            NGL.specialOps.showResidue('viewport', ab); //(id, selection, color, radius)
         });
     });
 
@@ -217,57 +219,83 @@ $('.pdb').click(function () {
             console.log(id +' is '+i.toString());
             NGL.specialOps.load(i);
             NGL.specialOps.showTitle("viewport",id);
-            if (data[i].name.search('_') !== -1) {ops.current_chain = myData.proteins[i].name.split('_')[1]}
-            else {ops.current_chain ='A'}
-
+            if (data[i].name.search('_') !== -1) {myData.currentChain = myData.proteins[i].name.split('_')[1]}
+            else {myData.currentChain ='A'}
+            $('.prolink').each((i,e) => $(e).data('selection',$(e).data('selection').replace(/:\w+/,':'+myData.currentChain)));
             return 1}
     }
 
     console.log('Failed.')
 });
 
+$('.pdb').click(function () {
+    var id = $(this).attr('id').slice(1); //remove the first 'f'
+    console.log(id);
+    for (var i=0; i < myData.proteins.length; i++) {
+        if (myData.proteins[i].name === id) {
+            console.log(id +' is '+i.toString());
+            NGL.specialOps.load(i);
+            NGL.specialOps.showTitle("viewport",id);
+            if (data[i].name.search('_') !== -1) {myData.currentChain = myData.proteins[i].name.split('_')[1]}
+            else {myData.currentChain ='A'}
+            $('.prolink').each((i,e) => $(e).data('selection',$(e).data('selection').replace(/:\w+/,':'+myData.currentChain)));
+            return 1}
+    }
+
+    console.log('Failed.')
+});
+
+
 ###  structure ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ###
 ### python proteins.pdbs is a list of {'description': elem.attrib['id'], 'id': elem.attrib['id']+'_'+chainid, 'x': loca[0], 'y': loca[1]}
 ### JS proteins is a list of {name: 'unique_name', type: 'rcsb' (default) | 'file' | 'data', value: xxx, 'ext': 'pdb' , loadFx: xxx}
 
-% if protein.pdbs:
+var collectedData = [];
+
+%if protein.pdbs:
 
     var data = ${str(protein.pdbs)|n}.map(function (prot) {
-        return {name: prot.id, type: 'rcsb', value: prot.description}
+        return {name: prot.id, type: 'rcsb', value: prot.id.split('_')[0], descrition: prot.description, chain: prot.id.split('_')[1]}
     });
-    if (data[0].name.search('_') !== -1) {ops.current_chain = data[0].name.split('_')[1]}
-            else {ops.current_chain ='A'}
 
-    NGL.specialOps.multiLoader("viewport",data,"white",0);
-    NGL.specialOps.showTitle("viewport",'PDB: '+data[0].name);
+    collectedData.push(...data);
 
-% elif protein.swissmodel:
+%endif
+%if protein.swissmodel:
 
     var data = ${str(protein.swissmodel)|n}.map(function (prot) {
-        return {name: prot.id, type: 'file', value: prot.url}
+        return {name: prot.id, type: 'file', value: prot.url, chain: 'A'}
     });
-    ops.current_chain ='A';
 
-    NGL.specialOps.multiLoader("viewport",data,"white",0);
-    NGL.specialOps.showTitle("viewport",'Swissmodel: '+data[0].name);
+    collectedData.push(...data);
 
-% elif protein.pdb_matches:
+%endif
+%if protein.pdb_matches:
 
-    var data = ${str(protein.swissmodel)|n}.map(function (prot) {
-    return {name: prot.id, type: 'rcsb', value: prot.description}
+    var data = ${str(protein.pdb_matches)|n}.map(function (prot) { //fblastpdb_4I1L_339_410_A
+    return {name: prot.id, type: 'rcsb', value: prot.id.split('_')[1], chain: prot.id.split('_')[4]}
     });
-    if (data[0].name.search('_') !== -1) {ops.current_chain = data[0].name.split('_')[1]}
-            else {ops.current_chain ='A'}
+    <%
+        print(protein.pdb_matches)
+    %>
+    if (data[0].name.search('_') !== -1) {
+        myData.currentChain = data[0].name.split('_')[1]}
+        else {myData.currentChain ='A'}
 
-    NGL.specialOps.multiLoader("viewport",data,"white",0);
-    NGL.specialOps.showTitle("viewport",'Homologue: '+data[0].name);
+    collectedData.push(...data);
 
     $('#save').click(function () {
        stage.makeImage( {trim: true, antialias: true, transparent: false }).then(function (img) {window.img=img; NGL.download(img);});
     });
-% else:
-    $('#viewport').append('<p><i class="far fa-dumpster-fire"></i> No model available.</p>');
-% endif
+%endif
+
+    if (!! collectedData) {
+        NGL.specialOps.multiLoader("viewport",collectedData,"white",0);
+        NGL.specialOps.showTitle("viewport",'PDB: '+data[0].name);
+    } else {
+        $('#viewport').append('<p><i class="far fa-dumpster-fire"></i> No model available.</p>');
+    }
+
 
 
 
@@ -288,9 +316,12 @@ $('#viewport_menu_popover')
             });
     });
 % endif
-
+$('.prolink').each((i,e) => $(e).data('selection',$(e).data('selection').replace(/:\w+/,':'+myData.currentChain)));
 $('#results [data-toggle="protein"]').protein();
 $('[data-toggle="tooltip"]').tooltip();
+
+
+######################## reset
 
 $('#new_analysis').click(function () {
     NGL.specialOps.hardReset();

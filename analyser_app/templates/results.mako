@@ -1,5 +1,9 @@
 <%page args="protein, home=''"/>
 
+<%
+    prolink = 'class="prolink" data-toggle="protein" data-target="viewport"'
+%>
+
 <div class="container-fluid" id="results">
     <div style="width:47vw; position:fixed; top:7rem; bottom: 24px; right: 24px;">
                     <div class="card shadow-sm">
@@ -56,14 +60,18 @@
                           ###################### simple ###################################
 
                         ${line_fore('Mutation')}
-                            <span class="prolink" data-toggle="protein" data-target="viewport" data-focus="residue" data-selection="${mutation.residue_index}">
+                            <span ${prolink|n} data-focus="residue" data-selection="${mutation.residue_index}:CURRENTCHAIN">
                                 ${mutation.long_name(mutation.from_residue)} at position ${mutation.residue_index}</span> is mutated to ${mutation.long_name(mutation.to_residue)}
                       ${line_aft()}
 
                           ###################### apriori ###################################
 
                         ${line_fore('Effect independent of structure')}
-                            ${mutation.apriori_effect}
+                          ${mutation.apriori_effect}
+                          %if mutation.to_residue == '*':
+                              <span ${prolink|n} data-focus="domain" data-selection="1-${mutation.residue_index}:CURRENTCHAIN">remnant</span>
+                              and <span ${prolink|n} data-focus="domain" data-selection="${mutation.residue_index}-99999:CURRENTCHAIN">lost</span>
+                          %endif
                           ${line_aft()}
 
                           ###################### location ###################################
@@ -75,13 +83,13 @@
                                     Namely, within domain:</p>
                                         <ul>
                                     %for f in feats:
-                                        <li><span class="prolink" data-toggle="protein" data-target="viewport"
+                                        <li><span ${prolink|n}
                                                   %if f['type'] in ('domain','propeptide','splice variant','signal peptide','repeat','coiled-coil region','compositionally biased region','short sequence motif','topological domain','transit peptide', 'transmembrane region','intramembrane region','region of interest','peptide'):
                                                   data-focus="domain"
                                                   %else:
                                                   data-focus="residue"
                                                   %endif
-                                                  data-selection="${f['x']}-${f['y']}">
+                                                  data-selection="${f['x']}-${f['y']}:CURRENTCHAIN">
                                             ${f['type']} &mdash; (${f['x']}&ndash;${f['y']})</span> ${f['description']}</li>
                                     %endfor
                                         </ul>
@@ -106,7 +114,7 @@
                                         </span>
 
                                         Possible motif ${m['status']}: <span data-toggle="tooltip" title="${m['description']} (${m['regex']}, p = ${m['probability']})" class="undelined">${m['name']}</span>
-                                        <span class="prolink" data-target="viewport" data-toggle="protein" data-selection="${m['x']}-${m['y']}" data-focus="residue">(${m['x']}-${m['y']})</span>
+                                        <span ${prolink|n} data-selection="${m['x']}-${m['y']}:CURRENTCHAIN" data-focus="residue">(${m['x']}-${m['y']})</span>
                                     </li>
                                 % endfor
                                 </ul>

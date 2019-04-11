@@ -109,7 +109,7 @@ NGL.specialOps.showResidue = function (id, selection, color, radius, view) {
         var atomSet = protein.structure.getAtomSetWithinSelection( selector , parseFloat(radius) );
         // expand selection to complete groups
         var atomSet2 = protein.structure.getAtomSetWithinGroup( atomSet );
-        var licoriceRep = protein.addRepresentation( "licorice", { sele: atomSet2.toSeleString()} );
+        var licoriceRep = protein.addRepresentation( "licorice", { sele: atomSet2.toSeleString()+ ' and not '+selection.toString()} );
         var hyperRep = protein.addRepresentation( "hyperball", { sele: selection.toString(), color: schemeId} );
         protein.addRepresentation("contact", {
             masterModelIndex: 0,
@@ -222,7 +222,10 @@ NGL.specialOps._run_loadFx = function (protein, fx) {
     if (typeof fx === 'function') {
         fx(protein)}
     else if (typeof fx === 'string') {
-        eval(fx.replace(/\W/g,''))(protein)} //prevent XSS
+        var fxname = fx.replace(/\W/g,'');
+       if (window[fxname] !== undefined) {window[fxname](protein)}
+       else {setTimeout((protein, fxname) => NGL.specialOps._run_loadFx(protein, fxname),300)} //ansync issue.
+       } //prevent XSS
     else {
         protein.addRepresentation("cartoon", {smoothSheet: true}); protein.autoView();
     }
@@ -234,7 +237,7 @@ NGL.specialOps.load = function (option) {
     NGL.specialOps.postInitialise();
     // determine what option is.
     var index;
-    if (typeof option === "undefined") {index = myData.current_index;} //use is lazy.
+    if (typeof option === "undefined") {index = myData.currentIndex;} //use is lazy.
     else if (typeof option === "number") {index = option;} //user gave index.
     else if (typeof option === 'object') { //user gave a protein object
         myData.proteins.push(object);
@@ -249,12 +252,12 @@ NGL.specialOps.load = function (option) {
     }
     else {throw 'No idea what this use submitted option is.'}
     // check if the one asked for is loaded.
-    if ( (index === myData.current_index)) {
+    if ( (index === myData.currentIndex)) {
         var protein = NGL.stageIds[myData.id].getComponentByType('structure');
         //if (typeof myData.proteins[index].loadFx === 'function') {myData.proteins[index].loadFx(protein)};
         return new Promise(function(resolve, reject) {resolve(protein);});
     }
-    else {myData.current_index = index}
+    else {myData.currentIndex = index; myData.currentChain = myData.proteins[index].chain}
     // deal with image.
     if ($('#'+myData.id+' img')) { NGL.specialOps.removeImg();}
     // toggle structure
@@ -274,8 +277,15 @@ NGL.specialOps.load = function (option) {
     else if (myData.proteins[index].type === 'data') {
         var ext = myData.proteins[index].ext || 'pdb';
         if (!! myData.proteins[index].isVariable) {
-            return NGL.stageIds[myData.id].loadFile(new Blob ([eval(myData.proteins[index].value.replace(/\W/g,'')), { type: 'text/plain'}]), { ext: ext }).then(function (protein) {
-            NGL.specialOps._run_loadFx(protein, myData.proteins[index].loadFx);});
+            var varname = myData.proteins[index].value.replace(/\W/g, '');
+            if (window[varname] !== undefined) {
+                return NGL.stageIds[myData.id].loadFile(new Blob([window[varname], {type: 'text/plain'}]), {ext: ext})
+                    .then(function (protein) {
+                        NGL.specialOps._run_loadFx(protein, myData.proteins[index].loadFx);
+                    });
+            } else { //async issue.
+                setTimeout((option) => NGL.specialOps.load, 300);
+            }
         }
         else if (typeof myData.proteins[index].value === 'string') {
             return NGL.stageIds[myData.id].loadFile(new Blob ([myData.proteins[index].value, { type: 'text/plain'}]), { ext: ext }).then(function (protein) {
@@ -286,7 +296,7 @@ NGL.specialOps.load = function (option) {
         }
     }
     else if (myData.proteins[index].type === 'none') {
-        myData.current_index = -1;  //pass. Super odd backdoor. Why is it needed? Let's keep it secret in case I think it's too weird.
+        myData.currentIndex = -1;  //pass. Super odd backdoor. Why is it needed? Let's keep it secret in case I think it's too weird.
     }
     else { //PDB code.
         return NGL.stageIds[myData.id].loadFile('rcsb://'+myData.proteins[index].value.replace('rcsb://','').toLowerCase().slice(0,4)).then(function (protein) {
@@ -324,7 +334,7 @@ NGL.specialOps.multiLoader = function (id, proteins, backgroundColor, startIndex
     NGL.specialOps._preventScroll(id);
     // check for awkard case it has already been started.
     if (typeof window.myData === 'object') {window.myData.proteins.push(...proteins);}
-    else {window.myData={current_index: -1, proteins: proteins, id: id, backgroundColor: backgroundColor || 'white'};}
+    else {window.myData={currentIndex: -1, proteins: proteins, id: id, backgroundColor: backgroundColor || 'white'};}
     var img = $('#'+id+' img');
     if (img.length) {
         img.click(function () {NGL.specialOps.load(startIndex);});
@@ -336,7 +346,7 @@ NGL.specialOps.postInitialise = function () {
     //this should not be used routinely!
     if (typeof window.myData === "undefined") {
         console.log('WARNING. initilise the scene with NGL.specialOps.multiLoader!');
-        window.myData={current_index: -1, proteins: [], id: 'viewport', backgroundColor: 'white'};
+        window.myData={currentIndex: -1, proteins: [], id: 'viewport', backgroundColor: 'white'};
         NGL.specialOps._preventScroll('viewport');
     }
 };
@@ -385,7 +395,8 @@ NGL.Stage.prototype.removeClashes = function () {
 
 NGL.specialOps.prolink = function (prolink) { //prolink is a JQuery object.
     //parse
-    var selection =$(prolink).data('selection'); //mandatory.
+    var selection =$(prolink).data('selection'); //mandatory
+    if (typeof selection === 'number') {selection = selection.toString()}
     var color = $(prolink).data('color'); //optional settings in methods
     var radius = $(prolink).data('radius');
     var tolerance = $(prolink).data('tolerance');
@@ -408,8 +419,8 @@ NGL.specialOps.prolink = function (prolink) { //prolink is a JQuery object.
             NGL.getStage(id).autoView(2000);
         }
         else if (view === 'reset') { //special view case.
-            if (typeof myData.proteins[myData.current_index].loadFx === 'function') {
-                myData.proteins[myData.current_index].loadFx(NGL.getStage(id).getComponentByType('structure'));
+            if (typeof myData.proteins[myData.currentIndex].loadFx === 'function') {
+                myData.proteins[myData.currentIndex].loadFx(NGL.getStage(id).getComponentByType('structure'));
             }
             else {
                 NGL.getStage(id).getComponentByType('structure').autoView(2000);

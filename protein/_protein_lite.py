@@ -209,8 +209,8 @@ class ProteinLite:
             self.mutation = mutation
         assert self.sequence, 'No sequence defined.'
         position = self.mutation.residue_index
-        neighbours = self._neighbours(midresidue=self.sequence[position - 1], position=position, span=20, marker='')
-        mut_neighbours = self._neighbours(midresidue=self.mutation.to_residue, position=position, span=20, marker='')
+        neighbours = self._neighbours(midresidue=self.sequence[position - 1], position=position, span=10, marker='')
+        mut_neighbours = self._neighbours(midresidue=self.mutation.to_residue, position=position, span=10, marker='')
         results = []
         for r in self.elmdata:
             w = self._rex_elm(neighbours, r['Regex'])
@@ -221,20 +221,21 @@ class ProteinLite:
                          'regex': r['Regex'],
                          'probability': float(r['Probability'])}
                 if w != False and m != False:
-                    match['x'] = w[0] + position - 10
-                    match['y'] = w[1] + position - 10
+                    match['x'] = w[0] + position - 5
+                    match['y'] = w[1] + position - 5
                     match['status'] = 'kept'
                 elif w !=False and m == False:
-                    match['x'] = w[0] + position - 10
-                    match['y'] = w[1] + position - 10
+                    match['x'] = w[0] + position - 5
+                    match['y'] = w[1] + position - 5
                     match['status'] = 'lost'
                 else:
-                    match['x'] = m[0] + position - 10
-                    match['y'] = m[1] + position - 10
+                    match['x'] = m[0] + position - 5
+                    match['y'] = m[1] + position - 5
                     match['status'] = 'gained'
                 results.append(match)
         self.mutation.elm = sorted(results,key= lambda m: m['probability'] + int(m['status'] == 'kept'))
         return self
+
 
 
 
