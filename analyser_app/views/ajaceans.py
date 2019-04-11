@@ -62,7 +62,6 @@ def analyse_view(request):
         ### wait for all to finish
         protein.complete()
         protein.predict_effect(mutation)
-        print(protein.mutation.elm)
         request.session['status']['step'] = 'complete'
         return {'protein': protein, 'mutation': protein.mutation}
     except NotImplementedError as err:

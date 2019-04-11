@@ -98,11 +98,35 @@
                                 %endif
                           ${line_aft()}
 
+                          ###################### gNOMAD ###################################
+                          <%
+                              neighbours = protein.get_gNOMAD_near_position(mutation)
+                          %>
+                          % if neighbours:
+                            ${line_fore('Nearby mutations in the population')}
+                                <p>The following motifs may be nearby: </p>
+                                <ul class="fa-ul">
+                                % for m in neighbours:
+                                    <li>
+                                        %if m['impact'] == 'HIGH':
+                                            <span class="fa-li" data-toggle="tooltip" title="impact: high"><i class="far fa-exclamation-triangle"></i></span>
+                                        %elif m['impact'] == 'MODERATE':
+                                            <span class="fa-li" data-toggle="tooltip" title="impact: moderate"><i class="far fa-info-circle"></i></span>
+                                        %else:
+                                            <span class="fa-li" data-toggle="tooltip" title="impact: ${m['impact'].lower()}"><i class="far fa-comment"></i></span>
+                                        %endif
+
+                                        <span ${prolink|n} data-focus="residue" data-selection="${m['x']}:CURRENTCHAIN">${m['description']}</span>
+                                    </li>
+                                % endfor
+                                </ul>
+                              ${line_aft()}
+                          % endif
 
                           ###################### motifs ###################################
                           % if mutation.elm:
                             ${line_fore('Possible motifs')}
-                                <p>The following motifs span the nearby region:</p>
+                                <p>The following motifs may be nearby: <span data-toggle="tooltip" title="Even when the location matches and the mutation is on the surface it is still hypothetical and requires litterature checks"><i class="far fa-question"></i></span> </p>
                                 <ul class="fa-ul">
                                 % for m in mutation.elm:
                                     <li><span class="fa-li" >

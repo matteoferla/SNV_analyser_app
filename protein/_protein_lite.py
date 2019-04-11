@@ -196,7 +196,6 @@ class ProteinLite:
         svalid = sorted(valid,key=lambda v: int(v['y'])-int(v['x']))
         return svalid
 
-
     def _rex_elm(self, neighbours, regex):
         rex = re.search(regex, neighbours)
         if rex:
@@ -235,6 +234,19 @@ class ProteinLite:
                 results.append(match)
         self.mutation.elm = sorted(results,key= lambda m: m['probability'] + int(m['status'] == 'kept'))
         return self
+
+    def get_gNOMAD_near_position(self, position, wobble=5):
+        ## dodgy position?
+        if isinstance(position,str):
+            position = int(position)
+        elif not isinstance(position,int):
+            position = position.residue_index
+        else:
+            position = position
+        ## deal with it.
+        valid = [g for g in self.gNOMAD if g['x'] - wobble < position < g['y'] + wobble]
+        svalid = sorted(valid,key=lambda v: int(v['y'])-int(v['x']))
+        return svalid
 
 
 
