@@ -16,7 +16,10 @@ ops.addToast = function (id, title, body, bg) {
 ops.halt = function () {
     clearTimeout(ops.timer);
     $('#analyse').removeAttr('disabled');
+    // double tap
     setTimeout(ops.halt,100);
+    // absolutely stop it.
+    setTimeout(()=>$('#toaster').children().detach(),1000);
 };
 
 ops.reset_warnings = function () {
