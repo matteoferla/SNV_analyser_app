@@ -184,8 +184,11 @@
                     </div>
                 </div>
             </div>
+
+<%include file="results.js.mako" args="protein=protein, home=''"/>
+<%include file="report/create_modal.mako"/>
+
 </div>
 
 
-##<%include file="results.tour.js.mako" args="protein=protein, home=''"></%include>
-<%include file="results.js.mako" args="protein=protein, home=''"></%include>
+

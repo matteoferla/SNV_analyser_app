@@ -86,6 +86,7 @@
 <%block name="modals"/>
 <%include file="login/user_modal.mako"/>
 
+
 ################################################################################################################################################
 ################################################################################################################################################
 
@@ -127,6 +128,7 @@
 % if needs_tour:   ## no CDN issue.
      <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-tour/0.11.0/js/bootstrap-tour.min.js"></script>
 % endif
+
 
 ######## script block
 <script type="text/javascript">

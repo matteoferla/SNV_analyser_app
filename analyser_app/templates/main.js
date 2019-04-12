@@ -45,6 +45,7 @@ ops.analyse = function (data)  {
             $('#input_card').hide(1000);
             $('main').append(msg);
             $('#new_analysis').show();
+            $('#report-btn').show();
             }
         })
         .fail(function () {
