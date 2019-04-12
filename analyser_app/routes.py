@@ -6,3 +6,4 @@ def includeme(config):
     config.add_route('random', '/get_random')
     config.add_route('login', '/login')
     config.add_route('admin', '/admin')
+    config.add_route('status', '/status')

@@ -19,3 +19,8 @@ def my_view(request):
             'needs_feat': True,
             'needs_ngl': True,
             'user': request.user}
+
+
+@view_config(route_name='status', renderer='json')
+def my_view(request):
+    return {'status': 'OK'}
