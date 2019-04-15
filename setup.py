@@ -8,6 +8,10 @@ with open(os.path.join(here, 'README.txt')) as f:
 with open(os.path.join(here, 'CHANGES.txt')) as f:
     CHANGES = f.read()
 
+print('REMEMBER TO SET SECRETCODE AND MICHELANGLO_URL and SQL_URL')
+#
+#
+
 requires = [
     'plaster_pastedeploy',
     'pyramid',

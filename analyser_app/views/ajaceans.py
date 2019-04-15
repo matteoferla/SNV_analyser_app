@@ -119,7 +119,7 @@ def talk_to_michelanglo(request):
                 'title': request.params['title'],
                 'protein': request.params['protein']
         }
-        return rq.post('http://localhost:8088/venus', data=data).content.decode('utf-8')
+        return rq.post(os.environ['MICHELANGLO_URL']+'/venus', data=data).content.decode('utf-8')
 
 
 
