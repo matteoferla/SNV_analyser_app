@@ -41,14 +41,14 @@
                     <h1><img src="static/protein.svg" style="height: 2.5rem;"> VENUS</h1>
                 </a>
             </div>
-            <div class="col-4 hidden-sm align-self-center">
+            <div class="col-3 hidden-sm align-self-center">
                 <span class="text-muted text-center"
                   data-target="#navbarHeader"
                   aria-controls="navbarHeader"
                   aria-expanded="false">Assessing the effect of amino acid variants have on structure</span>
             </div>
 
-            <div class="col-2 mx-2 align-self-center">
+            <div class="col-3 mx-2 align-self-center">
                 ###########rhs block
                 <span id="user"></span> &nbsp;
                 <button class="btn btn-outline-light" type="button" id="report-btn" data-toggle="modal" data-target="#report" style="display: none;">

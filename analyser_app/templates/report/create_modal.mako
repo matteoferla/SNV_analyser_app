@@ -51,12 +51,35 @@
     });
 
     $('#create-btn').click(function () {
-        // get the sibling column of the span element that has the same text as the data-target of the selected checkboxes.
+        // Gather data
+        // get the sibling column of the span element that has the same text as the data-target of the selected checkboxes. Simple ae?
+        var protein = myData.proteins[$('#modelSelect option:selected').val()];
         var description = $('input:checkbox:checked')
                         .map((i,v)  => $(v).data('target'))
                         .map((i,v) => $('span:contains("'+v+'")')
                         .parent().next().html())
-                        .toArray().join('\n');
-        var title = '${protein.gene_name} ${mutation} <small>(${protein.recommended_name})</small>';
+                        .toArray().join('\n').replace('CURRENTCHAIN', myData.currentChain);
+        var title = '${protein.gene_name} ${mutation} (${protein.recommended_name})';
+
+
+        // ask VENUS to ask Michelanglo to make a page.
+        $.ajax({
+        url: "/xpost",
+        type: 'POST',
+        dataType: 'json',
+        data: {
+            'description': description,
+            'title': title,
+            'protein': JSON.stringify(protein)
+        }
+        }).done(function (msg) {
+            console.log('You are about to be redirected to '+"http://localhost:8088/data/"+msg.page);
+            window.location = "http://localhost:8088/data/"+msg.page;
+        }).fail(function (xhr) { //temporary.
+            if (xhr.responseJSON) {
+                ops.addToast('errored','Error',xhr.responseJSON.status,'bg-danger');
+            }
+
+        })
     });
 </script>
