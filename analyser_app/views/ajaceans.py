@@ -112,7 +112,6 @@ def talk_to_michelanglo(request):
     Two layers of security. A shared environment variable and REMOTE_ADDR 127.0.0.1
     Do note that the apps are in different venvs.
     """
-    os.environ['SECRETCODE'] = 'Monty pythons flying circus'
     if request.user: #this feature is not open to unregistered users.
         data = {'username': request.user.name,
                 'code': os.environ['SECRETCODE'],
