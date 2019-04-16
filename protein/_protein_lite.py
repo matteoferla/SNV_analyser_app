@@ -248,6 +248,21 @@ class ProteinLite:
         svalid = sorted(valid,key=lambda v: int(v['y'])-int(v['x']))
         return svalid
 
+    #### THE FUTURE
+
+    def get_structure(self):
+        pass
+
+    def is_core(self):
+        pass
+
+    def get_structure_neighbours(self):
+        pass
+
+    # conservation score
+    # disorder
+
+
 
 
 
