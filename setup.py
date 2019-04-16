@@ -8,7 +8,7 @@ with open(os.path.join(here, 'README.txt')) as f:
 with open(os.path.join(here, 'CHANGES.txt')) as f:
     CHANGES = f.read()
 
-print('REMEMBER TO SET SECRETCODE AND MICHELANGLO_URL and SQL_URL')
+print('REMEMBER TO SET ENVIRONMENT SECRETCODE AND MICHELANGLO_URL and SQL_URL (`export` COMMAND)')
 #
 #
 
@@ -25,8 +25,8 @@ requires = [
     'transaction',
     'zope.sqlalchemy',
     'bcrypt',
-    'markdown'
-]
+    'markdown',
+    'psycopg2']
 
 tests_require = [
     'WebTest >= 1.3.1',  # py3 compat
