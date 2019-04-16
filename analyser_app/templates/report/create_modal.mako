@@ -62,6 +62,10 @@
         var title = '${protein.gene_name} ${mutation} (${protein.recommended_name})';
 
 
+        <%
+            import os
+            michelanglo = os.environ['MICHELANGLO_URL']
+        %>
         // ask VENUS to ask Michelanglo to make a page.
         $.ajax({
         url: "/xpost",
@@ -73,8 +77,10 @@
             'protein': JSON.stringify(protein)
         }
         }).done(function (msg) {
-            console.log('You are about to be redirected to '+"http://localhost:8088/data/"+msg.page);
-            window.location = "http://localhost:8088/data/"+msg.page;
+            if (msg.status === 'success')
+            {ops.addToast('redirect','Redirect','You are about to be redirected to '+"${michelanglo}/data/"+msg.page,'bg-info');
+            window.location = "${michelanglo}/data/"+msg.page;}
+            else {ops.addToast('errored','Error','Something went wrong','bg-danger');}
         }).fail(function (xhr) { //temporary.
             if (xhr.responseJSON) {
                 ops.addToast('errored','Error',xhr.responseJSON.status,'bg-danger');
