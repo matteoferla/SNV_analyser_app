@@ -10,3 +10,6 @@ VENUS has the same rationale for users as the [sister app, Michelanglo, an a NGL
 Consequently, see [its documentation](https://ngl.matteoferla.com/docs).
 
 Likewise, when editing reports see [the markdown documentation](https://ngl.matteoferla.com/markup).
+
+# Git submodule
+Do note that this repo uses [github.com/matteoferla/VENUS-data](https://github.com/matteoferla/VENUS-data) as a submodule, so clone with `--recurse-submodules` flag.
