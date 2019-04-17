@@ -84,7 +84,7 @@
 
 
 <%block name="modals"/>
-<%include file="login/user_modal.mako"/>
+<%include file="../login/user_modal.mako"/>
 
 
 ################################################################################################################################################
@@ -134,7 +134,7 @@
 <script type="text/javascript">
     $( document).ready(function () {
         <%block name="script"/>
-        <%include file="login/user_modal.js"/>
+        <%include file="../login/user_modal.js"/>
 
 
         ///////// username

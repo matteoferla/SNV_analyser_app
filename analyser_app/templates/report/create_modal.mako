@@ -13,7 +13,7 @@
         <p>Choose which elements to keep (the text can be edited in a second step).</p>
 
 
-                % for e in ('Mutation','Effect independent of structure','Location','Nearby mutations in the population','Possible motifs','External links'):
+                % for e in ('Mutation','Effect independent of structure','Effect based on structure','Location','Nearby mutations in the population','Possible motifs','External links'):
                     <div class="custom-control custom-switch">
                       <input type="checkbox" class="custom-control-input" id="checkbox${e.replace(' ','')}" data-target="${e}">
                       <label class="custom-control-label" for="checkbox${e.replace(' ','')}">Add &ldquo;${e}&rdquo; section</label>

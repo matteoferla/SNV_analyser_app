@@ -9,7 +9,7 @@ window.invalidate = function (id) {
 window.ops={timer: null, i: 0};
 
 ops.addToast = function (id, title, body, bg) {
-        $('#toaster').append(`<%include file="toast.mako" args="toast_id='${id}', toast_title='${title}', toast_body='${body}', toast_bg='${bg}', toast_autohide='true', toast_delay=5000 "/>`);
+        $('#toaster').append(`<%include file="layout_components/toast.mako" args="toast_id='${id}', toast_title='${title}', toast_body='${body}', toast_bg='${bg}', toast_autohide='true', toast_delay=5000 "/>`);
         $('#'+id).toast('show');
     };
 

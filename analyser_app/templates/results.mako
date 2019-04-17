@@ -74,6 +74,13 @@
                           %endif
                           ${line_aft()}
 
+
+                          ###################### structural ###################################
+
+                        ${line_fore('Effect based on structure')}
+                            <p>section silenced while being rebuilt.</p>
+                          ${line_aft()}
+
                           ###################### location ###################################
 
                           ${line_fore('Location')}

@@ -64,7 +64,7 @@
 </head>
 <body>
 
-<%include file="header.mako" args="home=home,others=others"/>
+<%include file="layout_components/header.mako" args="home=home,others=others"/>
 
 <main role="main">
 

@@ -219,30 +219,13 @@ $('.pdb').click(function () {
             console.log(id +' is '+i.toString());
             NGL.specialOps.load(i);
             NGL.specialOps.showTitle("viewport",id);
-            if (data[i].name.search('_') !== -1) {myData.currentChain = myData.proteins[i].name.split('_')[1]}
-            else {myData.currentChain ='A'}
+            //if (data[i].name.search('_') !== -1) {myData.currentChain = myData.proteins[i].name.split('_')[1]} else {myData.currentChain ='A'}
+            myData.currentChain = myData.proteins[i].chain;
             $('.prolink').each((i,e) => $(e).data('selection',$(e).data('selection').replace(/:\w+/,':'+myData.currentChain)));
             return 1}
     }
 
-    console.log('Failed.')
-});
-
-$('.pdb').click(function () {
-    var id = $(this).attr('id').slice(1); //remove the first 'f'
-    console.log(id);
-    for (var i=0; i < myData.proteins.length; i++) {
-        if (myData.proteins[i].name === id) {
-            console.log(id +' is '+i.toString());
-            NGL.specialOps.load(i);
-            NGL.specialOps.showTitle("viewport",id);
-            if (data[i].name.search('_') !== -1) {myData.currentChain = myData.proteins[i].name.split('_')[1]}
-            else {myData.currentChain ='A'}
-            $('.prolink').each((i,e) => $(e).data('selection',$(e).data('selection').replace(/:\w+/,':'+myData.currentChain)));
-            return 1}
-    }
-
-    console.log('Failed.')
+    console.log('Failed.');
 });
 
 

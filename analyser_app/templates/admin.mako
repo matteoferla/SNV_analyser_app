@@ -1,4 +1,4 @@
-<%inherit file="layout.mako"/>
+<%inherit file="layout_components/layout.mako"/>
 
 <%block name="main">
 % if user and user.role == 'admin':

@@ -32,6 +32,12 @@ namedex = json.load(open('data/human_prot_namedex.json', 'r'))
 #seqdex = json.load(open('data/human_prot_seqdex.json', 'r'))
 #genedex = json.load(open('data/human_prot_genedex.json', 'r'))
 
+
+
+
+############################### Analyse the mutation
+
+
 @view_config(route_name='analyse', renderer="../templates/results.mako")
 def analyse_view(request):
     def error_response(msg):
@@ -69,6 +75,10 @@ def analyse_view(request):
         traceback.print_exc(limit=3, file=sys.stdout)
         return error_response(str(err)+' gave a '+err.__name__)
 
+
+############################### Check status
+
+
 @view_config(route_name='task_check', renderer="json")
 def status_check_view(request):
     if 'status' not in request.session:
@@ -82,6 +92,14 @@ def status_check_view(request):
         return {'status': 'Analysis for {g} {m} is complete.'.format(g=request.session['status']['gene'],
                                                                      m=request.session['status']['mutation']),
                 'complete': True}
+
+
+
+
+
+############################### Give a random view that will give a protein
+
+
 
 @view_config(route_name='random', renderer="json")
 def random_view(request):
@@ -102,24 +120,8 @@ def random_view(request):
             except IndexError:
                 print('Error... PDB numbering is wonky!')
 
-import requests as rq
 
-@view_config(route_name='xpost', renderer="string")
-def talk_to_michelanglo(request):
-    """
-    This is an experimental option. What if there was a single user db?
-    The problem is that the cookie on one App is different from the other.
-    Two layers of security. A shared environment variable and REMOTE_ADDR 127.0.0.1
-    Do note that the apps are in different venvs.
-    """
-    if request.user: #this feature is not open to unregistered users.
-        data = {'username': request.user.name,
-                'code': os.environ['SECRETCODE'],
-                'description': request.params['description'],
-                'title': request.params['title'],
-                'protein': request.params['protein']
-        }
-        return rq.post(os.environ['MICHELANGLO_URL']+'/venus', data=data).content.decode('utf-8')
+
 
 
 
