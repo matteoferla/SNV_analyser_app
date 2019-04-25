@@ -49,7 +49,7 @@ def analyse_view(request):
 
     def error_response(msg):
         request.session['status']['step'] = 'complete'
-        log.info(f'error during analysis {msg}')
+        log.warn(f'error during analysis {msg}')
         return render_to_response('json', {'error': msg}, request)
 
     if 'status' in request.session and request.session['status']['step'] != 'complete':
