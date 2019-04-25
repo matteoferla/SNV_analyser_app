@@ -57,5 +57,4 @@ def get_ajax(request):
     else:
         request.response.status = 404
         log_it()
-        print('unknown item '+request.params['item'])
         return render_to_response("../templates/part_error.mako", {'project': 'VENUS', 'error': '404'}, request)

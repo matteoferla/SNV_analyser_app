@@ -64,12 +64,12 @@ def analyse_view(request):
         ### load protein
         uniprot = namedex[request.POST['gene']]
         request.session['status']['gene'] = uniprot
-        protein = ProteinLite(uniprot=uniprot).load()
+        protein = ProteinLite(uniprot=uniprot).load() ## this only fails in dev mode with too few genes
         ### parse mutations
         mutation = Mutation(request.POST['mutation'])
         request.session['status']['mutation'] = str(mutation)
         if not protein.check_mutation(mutation):
-            print('protein mutation discrepancy error')
+            log.warn('protein mutation discrepancy error')
             return error_response(protein.mutation_discrepancy(mutation))
         ### wait for all to finish
         protein.complete()
@@ -88,7 +88,7 @@ def analyse_view(request):
 @view_config(route_name='task_check', renderer="json")
 def status_check_view(request):
     if 'status' not in request.session:
-        print('missing job error')
+        log.warn('missing job error')
         return {'error': 'No job found'}
     elif request.session['status']['step'] != 'complete':
         return {'status': 'You have an ongoing analysis for {g} {m}, which is at {s} step.'.format(g=request.session['status']['gene'],

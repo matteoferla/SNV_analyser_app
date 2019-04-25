@@ -161,10 +161,13 @@
             set_username(null, null, true);
         %endif
     });
-
-
 </script>
 
+<script src="https://browser.sentry-cdn.com/5.1.1/bundle.min.js" crossorigin="anonymous"></script>
+<script type="text/javascript">
+    Sentry.init({ dsn: 'https://632323cd831e4a32ab4a50d3b8fadf06@sentry.io/1446673' });
+    window.onerror = Sentry.captureException;
+</script>
 
 </body>
 </html>

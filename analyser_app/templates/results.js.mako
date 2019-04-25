@@ -258,9 +258,6 @@ var collectedData = [];
     var data = ${str(protein.pdb_matches)|n}.map(function (prot) { //fblastpdb_4I1L_339_410_A
     return {name: prot.id, type: 'rcsb', value: prot.id.split('_')[1], chain: prot.id.split('_')[4]}
     });
-    <%
-        print(protein.pdb_matches)
-    %>
     if (data[0].name.search('_') !== -1) {
         myData.currentChain = data[0].name.split('_')[1]}
         else {myData.currentChain ='A'}
