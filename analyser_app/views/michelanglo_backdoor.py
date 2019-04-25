@@ -2,6 +2,8 @@ import requests as rq
 from pyramid.view import view_config
 import os
 
+import logging
+log = logging.getLogger(__name__)
 
 @view_config(route_name='xpost', renderer="string")
 def talk_to_michelanglo(request):
@@ -18,4 +20,9 @@ def talk_to_michelanglo(request):
                 'title': request.params['title'],
                 'protein': request.params['protein']
         }
+        log.info(f'{request.user.name} generated a report')
         return rq.post(os.environ['MICHELANGLO_URL']+'/venus', data=data).content.decode('utf-8')
+    else:
+        log.warn(f'Unregisted user tried to generate a report')
+        request.response.status = 403
+        return {'status':'Please register'}

@@ -1,3 +1,16 @@
+######### sentry.io logging
+
+
+import sentry_sdk, os
+from sentry_sdk.integrations.pyramid import PyramidIntegration
+
+if 'SENTRY_DNS_VENUS' in os.environ: #this is not in the config file due to security as this github repo is public.
+    sentry_sdk.init(
+     dsn=os.environ['SENTRY_DNS_VENUS'],
+     integrations=[PyramidIntegration()]
+    )
+
+
 from pyramid.config import Configurator
 from pyramid.session import SignedCookieSessionFactory
 

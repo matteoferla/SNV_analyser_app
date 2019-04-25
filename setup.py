@@ -26,7 +26,10 @@ requires = [
     'zope.sqlalchemy',
     'bcrypt',
     'markdown',
-    'psycopg2']
+    'psycopg2', #install with conda
+    #'libpq-dev',
+    'sentry_sdk'
+]
 
 tests_require = [
     'WebTest >= 1.3.1',  # py3 compat

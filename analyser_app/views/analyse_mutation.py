@@ -24,7 +24,8 @@ from protein import ProteinLite, Mutation
 from mako.template import Template
 from mako.lookup import TemplateLookup
 
-import json, threading, time, os
+import json, threading, time, os, logging
+log = logging.getLogger(__name__)
 from pprint import PrettyPrinter
 pprint = PrettyPrinter().pprint
 
@@ -40,12 +41,18 @@ namedex = json.load(open('data/human_prot_namedex.json', 'r'))
 
 @view_config(route_name='analyse', renderer="../templates/results.mako")
 def analyse_view(request):
+
+    if request.user:
+        log.info(f'analysis for user {request.user.name}')
+    else:
+        log.info(f'analysis for unregisted user')
+
     def error_response(msg):
         request.session['status']['step'] = 'complete'
+        log.info(f'error during analysis {msg}')
         return render_to_response('json', {'error': msg}, request)
 
     if 'status' in request.session and request.session['status']['step'] != 'complete':
-        print('Double analysis error')
         return error_response('You have an ongoing analysis already for {g} {m}, which is at {s} step.'.format(g=request.session['status']['gene'],
                                                                                                           m=request.session['status']['mutation'],
                                                                                                           s=request.session['status']['step']))
@@ -53,7 +60,6 @@ def analyse_view(request):
         request.session['status'] = {'gene': '<parsing gene>', 'step': 'starting', 'mutation': '<parsing mutation>'}  # step = starting | complete | failed
     try:
         if request.POST['gene'] not in namedex:
-            print('Invalid gene error')
             return error_response('The gene name is not valid.')
         ### load protein
         uniprot = namedex[request.POST['gene']]
@@ -71,8 +77,8 @@ def analyse_view(request):
         request.session['status']['step'] = 'complete'
         return {'protein': protein, 'mutation': protein.mutation}
     except NotImplementedError as err:
-        print('actual error')
-        traceback.print_exc(limit=3, file=sys.stdout)
+        #traceback.print_exc(limit=3, file=sys.stdout)
+        log.exception('Analysis error')
         return error_response(str(err)+' gave a '+err.__name__)
 
 
