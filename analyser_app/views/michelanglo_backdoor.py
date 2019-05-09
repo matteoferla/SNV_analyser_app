@@ -21,7 +21,8 @@ def talk_to_michelanglo(request):
                 'protein': request.params['protein']
         }
         log.info(f'{request.user.name} generated a report')
-        return rq.post(os.environ['MICHELANGLO_URL']+'/venus', data=data).content.decode('utf-8')
+        return rq.post('http://127.0.0.1:8088/venus', data=data).content.decode('utf-8')
+        ## why was it os.environ['MICHELANGLO_URL'] and not localhost:8088???
     else:
         log.warn(f'Unregisted user tried to generate a report')
         request.response.status = 403
