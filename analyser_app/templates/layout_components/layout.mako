@@ -46,7 +46,7 @@
     % endif
 
     ######################## THEME.CSS
-    <link href="${request.static_url('analyser_app:static/theme.css')}" rel="stylesheet">
+    <link href="static/theme.css" rel="stylesheet">
 
     <!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!--[if lt IE 9]>
@@ -103,13 +103,14 @@
 % if needs_ngl:
     % if cdn == 'remote':   ### this is not good.
         <script type="text/javascript">alert('rawgit CDN is out of date');</script>
-        <script src="https://cdn.rawgit.com/arose/ngl/v0.10.4-1/dist/ngl.js" type="text/javascript"></script>
+        <script src="https://unpkg.com/ngl@2.0.0-dev.34/dist/ngl.js" type="text/javascript"></script>
     % elif cdn == 'home':
         <script src="https://www.matteoferla.com/ngl/dist/ngl.js" type="text/javascript"></script>
     % else: ## local
         <script src="ngl/dist/ngl.js" type="text/javascript"></script>
     % endif
-    <script src="${request.static_url('analyser_app:static/ngl.extended.js')}" type="text/javascript"></script>
+
+    <script type="text/javascript" src="https://michelanglo.sgc.ox.ac.uk/michelanglo.js"></script>
 % endif
 
 % if needs_clip:  ## no CDN issue.

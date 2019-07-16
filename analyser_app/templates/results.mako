@@ -12,17 +12,6 @@
                         </h5></div>
                       <div class="card-body">
                         <div id="viewport" style="width:100%; height: 0; padding-bottom: 100%;">
-                            <button type="button"
-                                    class="btn btn-outline-secondary rounded-circle bg-white"
-                                    style="position:absolute; top:4.5rem; right:10px; z-index:1001"
-                                    id="viewport_menu_popover"
-                                    data-toggle="popover"
-                                            data-html="true"
-                                            data-trigger="manual"
-                                            data-title="Options"
-                                            data-content='To do. Plug me in with stuff stolen from Cosmic3D'>
-                                <b>&nbsp;<i class="far fa-ellipsis-v"></i>&nbsp;</b>
-                            </button>
                         </div>
                       </div>
                     </div>
@@ -194,7 +183,7 @@
 
 <%include file="results.js.mako" args="protein=protein, home=''"/>
 <%include file="report/create_modal.mako"/>
-
+<script type="text/javascript" src="https://michelanglo.sgc.ox.ac.uk/michelanglo_menu.js"></script>
 </div>
 
 
