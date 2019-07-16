@@ -9,3 +9,4 @@ def includeme(config):
     config.add_route('get', '/get')
     config.add_route('status', '/status')
     config.add_route('xpost', '/xpost')
+    config.add_route('msg', '/msg')

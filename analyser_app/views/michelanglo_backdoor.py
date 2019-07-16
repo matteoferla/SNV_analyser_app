@@ -26,4 +26,4 @@ def talk_to_michelanglo(request):
     else:
         log.warn(f'Unregisted user tried to generate a report')
         request.response.status = 403
-        return {'status':'Please register'}
+        return {'status': 'Please register'}
