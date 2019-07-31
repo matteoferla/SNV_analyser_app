@@ -12,14 +12,18 @@ log = logging.getLogger(__name__)
 @view_config(route_name='home', renderer='../templates/main.mako')
 def my_view(request):
     if request.user:
-        log.info(f'{request.matched_route} for {request.user.name}')
+        log.info(f'{request.matched_route.name} for {request.user.name}')
     else:
-        log.info(f'{request.matched_route} for unregistered user')
-    return {'project': 'Venus',
+        log.info(f'{request.matched_route.name} for unregistered user')
+    page = request.matched_route.name
+    reply = {'project': 'Venus',
             'needs_tour': True,
             'needs_feat': True,
             'needs_ngl': True,
             'user': request.user}
+    if page == 'admin':
+        reply['users'] = request.dbsession.query(User).all()
+    return reply
 
 @view_config(route_name='status', renderer='json')
 def status_view(request):

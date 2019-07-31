@@ -25,7 +25,7 @@ window.getModalContent = function (part) {
                 }).done( (msg) => {
                     $('#login .modal-content').detach();
                     $('#login .modal-dialog').append(msg);
-                }).fail((xhr) => $('#login .modal-body').append('<div class="alert alert-danger" role="alert">Something went wrong with your request.</div>'));
+                }).fail(ops.addErrorToast);
 };
 
 window.doModalAction = function (action) {

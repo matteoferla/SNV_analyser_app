@@ -9,17 +9,27 @@ window.invalidate = function (id) {
 window.ops={timer: null, i: 0};
 
 ops.addToast = function (id, title, body, bg) {
+        id = id || 'T'+Date.now();
         $('#toaster').append(`<%include file="layout_components/toast.mako" args="toast_id='${id}', toast_title='${title}', toast_body='${body}', toast_bg='${bg}', toast_autohide='true', toast_delay=5000 "/>`);
         $('#'+id).toast('show');
+
     };
+
+ops.addErrorToast = (xhr) => {if (!! xhr.responseJSON) {
+                                            ops.addToast('userpageerror','Error '+xhr.status,'An error occured.'+xhr.responseJSON.status, 'bg-danger');
+                                                }
+                              else if (!! xhr.responseText) {
+                                            ops.addToast('userpageerror', 'Error ' + xhr.status, 'An error occured.' + xhr.responseText, 'bg-danger');
+                                        }
+                              else {
+                                            ops.addToast('userpageerror','Error '+xhr.status,'An unknown error occured.', 'bg-danger');
+                                     }
+                             };
 
 ops.halt = function () {
     clearTimeout(ops.timer);
     $('#analyse').removeAttr('disabled');
-    // double tap
     setTimeout(ops.halt,100);
-    // absolutely stop it.
-    setTimeout(()=>$('#toaster').children().detach(),1000);
 };
 
 ops.reset_warnings = function () {
@@ -48,12 +58,7 @@ ops.analyse = function (data)  {
             $('#report-btn').show();
             }
         })
-        .fail(function () {
-            ops.halt();
-            ops.addToast('res_error','Error','<i class="far fa-bug"></i> An issue arose loading the results. Please review and try again','bg-danger');
-            $('#analyse').removeAttr('disabled');
-            return 0;
-        });
+        .fail(ops.addErrorToast);
 };
 
 $('#reset').click(function () {
@@ -94,11 +99,7 @@ ops.statusCheck = function (data) {
                     },1000);}
             return 1;
         })
-        .fail(function () {
-            ops.addToast('error_step'+i,'Error','<i class="far fa-bug"></i> An issue arose. Please review and try again','bg-danger');
-            ops.halt();
-            return 0;
-        });
+        .fail(ops.addErrorToast);
 };
 
 //## request

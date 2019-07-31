@@ -1,12 +1,6 @@
 
 window.timer;
 
-window.addToast = function (id, title, body, bg) {
-        $('#toaster').append(`<%include file="toast.mako" args="toast_id='${id}', toast_title='${title}', toast_body='${body}', toast_bg='${bg}', toast_autohide='true', toast_delay=5000 "/>`);
-        $('#'+id).toast('show');
-    };
-
-
 window.checkGene = function (data) {
     $.ajax({
         type: "POST",
@@ -25,8 +19,7 @@ window.checkGene = function (data) {
                 return msg.uniprot_name;
             }
         })
-        .fail(function () {halt();
-            addToast('error_step','Error','<i class="far fa-bug"></i> An issue arose. Please review and try again','bg-danger');
+        .fail(function (xhr) {halt(); ops.addErrorToast(xhr);
             return 0
         });
 };
@@ -55,8 +48,8 @@ window.statusCheck = function (data) {
                 get_results(data);}
             return 1;
         })
-        .fail(function () {
-            addToast('error_step','Error','<i class="far fa-bug"></i> An issue arose. Please review and try again','bg-danger');
+        .fail(function (xhr) {
+            ops.addErrorToast(xhr);
             halt();
             return 0;
         });
@@ -79,8 +72,8 @@ window.checkMut = function (data) {
             else {addToast('Mut_good','Mutation is valid: '+msg.uniprot_name,'<i class="far fa-check"></i> The mutation matches the sequence','bg-info');}
             return msg.uniprot_name;
         })
-        .fail(function () {
-            addToast('Mut_error','Error','<i class="far fa-bug"></i> An issue arose. Please review and try again','bg-danger');
+        .fail(function (xhr) {
+            ops.addErrorToast(xhr);
             halt();
             return 0
         });
@@ -104,7 +97,7 @@ window.get_results = function (data)  {
             $('main').append(msg);
         })
         .fail(function () {
-            addToast('res_error','Error','<i class="far fa-bug"></i> An issue arose loading the results. Please review and try again','bg-danger');
+            ops.addErrorToast(xhr);
             $('#analyse').removeAttr('disabled');
             return 0;
         });

@@ -7,8 +7,8 @@
         %endif
 
         <%
-            owned = user.get_owned_loaded_pages()
-            visited = user.get_visited_loaded_pages()
+            owned = user.owned.select(request)
+            visited = user.visited.select(request)
         %>
 
         ################# owned
@@ -17,7 +17,7 @@
             <ul>
                 %for page in owned:
                     <li class="list-group-item" data-page="${page.identifier}">
-                        <a href="/data/${page.identifier}">${page.settings['title']}</a>
+                        <a href="/data/${page.identifier}">${page.title}</a>
                         <button class="btn btn-danger btn-sm float-right py-0" onclick="deletePage('${page.identifier}')"><i class="far fa-trash-alt"></i></button>
                     </li>
                 %endfor
@@ -31,7 +31,7 @@
             <ul>
                 %for page in visited:
                     <li class="list-group-item" data-page="${page.identifier}">
-                        <a href="/data/${page.identifier}">${page.settings['title']}</a>
+                        <a href="/data/${page.identifier}">${page.title}</a>
                     </li>
                 %endfor
             </ul>

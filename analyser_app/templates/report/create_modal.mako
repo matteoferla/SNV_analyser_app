@@ -81,11 +81,6 @@
                 {ops.addToast('redirect','Redirect','You are about to be redirected to '+"${michelanglo}/data/"+msg.page,'bg-info');
                 window.location = "${michelanglo}/data/"+msg.page;}
             else {ops.addToast('errored','Error','Something went wrong: '+msg.status,'bg-danger');}
-        }).fail(function (xhr) { //temporary.
-            if (xhr.responseJSON) {
-                ops.addToast('errored','Error',xhr.responseJSON.status,'bg-danger');
-            } else {ops.addToast('errored','Error (are you logged in?)','bg-danger');}
-
-        })
+        }).fail(ops.addErrorToast)
     });
 </script>
