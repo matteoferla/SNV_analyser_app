@@ -19,7 +19,7 @@ from pyramid.renderers import render_to_response
 # from Tracker_analyser import Variant
 # Variant.from_pickle = False
 
-from protein import ProteinLite, Mutation
+from protein import ProteinAnalyser, Mutation
 
 from mako.template import Template
 from mako.lookup import TemplateLookup
@@ -120,7 +120,8 @@ def random_view(request):
                 pdb = protein.swissmodel[0]
             else:
                 continue
-            i = random.randint(int(pdb['x'])-1, int(pdb['y'])-1)
+            clean = lambda x: int(x.split(',')[0]) if isinstance(x, str) else int(x)
+            i = random.randint(clean(pdb['x'])-1, clean(pdb['y'])-1)
             try:
                 return {'name': k, 'mutation': 'p.{f}{i}{t}'.format(f = protein.sequence[i], i = i+1, t = random.choice(Mutation.aa_list))}
             except IndexError:

@@ -1,6 +1,8 @@
 from pyramid.view import view_config
 from pyramid.response import Response
 
+
+
 from sqlalchemy.exc import DBAPIError
 
 from .. import models
@@ -22,7 +24,8 @@ def my_view(request):
             'needs_ngl': True,
             'user': request.user}
     if page == 'admin':
-        reply['users'] = request.dbsession.query(User).all()
+        #reply['users'] = request.dbsession.query(User).all()
+        pass
     return reply
 
 @view_config(route_name='status', renderer='json')

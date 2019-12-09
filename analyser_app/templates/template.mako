@@ -1,4 +1,5 @@
 <%page args="variant, home,others"/>
+### IGNORE THIS. THIS IS DEPRACATED AND DISUSED!
 <!DOCTYPE html>
 <html lang="en">
 <head>

@@ -50,11 +50,7 @@
 
             <div class="col-3 mx-2 align-self-center">
                 ###########rhs block
-                <span id="user"></span> &nbsp;
-                <button class="btn btn-outline-light" type="button" id="report-btn" data-toggle="modal" data-target="#report" style="display: none;">
-                    <i class="far fa-clipboard-list fa-lg"></i></button>
-                <button class="btn btn-outline-light" type="button" id="new_analysis" style="display: none;">
-                    <i class="far fa-undo  fa-lg"></i></button>
+                <span id="user"></span>&nbsp;
                 <button class="btn btn-outline-light" type="button" data-toggle="collapse" data-target="#navbarHeader"
                     aria-controls="navbarHeader" aria-expanded="false" aria-label="Toggle navigation">
                     <i class="far fa-bars fa-lg"></i>

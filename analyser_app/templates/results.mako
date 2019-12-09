@@ -19,10 +19,31 @@
     <div class="row">
                 <!-- Main text -->
                 <div class="col-6 mb-4 pl-4">
+                    <div class="card shadow-sm bg-light">
+                        <div class="card-body  text-center">
+                            <div class="btn-group" role="group" aria-label="Basic example">
+                              <button type="button" class="btn btn-outline-warning" id="new_analysis">
+                                  <i class="far fa-undo  fa-lg"></i> Analyse another
+                              </button>
+                                <button class="btn btn-outline-secondary" type="button" id="feedback-btn" data-toggle="modal" data-target="#modal_feedback">
+                                    <i class="far fa-star"></i> Feedback
+                                </button>
+                                <button class="btn btn-outline-primary" type="button" id="report-btn" data-toggle="modal" data-target="#report">
+                                    <i class="far fa-clipboard-list fa-lg"></i> Create a sharable page (Michelaɴɢʟo)
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+    </div>
+
+    <div class="row">
+                <div class="col-6 mb-4 pl-4">
                     <div class="card shadow-sm">
                         <div class="card-header"><h3 class="card-title">
                             ${protein.gene_name} ${mutation} <small>(${protein.recommended_name})</small>
-                        </h3><h6 class="card-subtitle mb-2 text-muted">
+                        </h3>
+                        <h6 class="card-subtitle mb-2 text-muted">
                             Predicted effects
                         </h6></div>
 
@@ -147,16 +168,16 @@
                         ${line_fore('External links')}
                             <a href="https://www.uniprot.org/uniprot/${protein.uniprot}" target="_blank">Uniprot:${protein.uniprot} <i class="far fa-external-link-square"></i></a> &mdash;
                             <a href="https://www.rcsb.org/pdb/protein/${protein.uniprot}" target="_blank">PDB:${protein.uniprot} <i class="far fa-external-link-square"></i></a> &mdash;
-                            <a href="https://gnomad.broadinstitute.org/gene/${protein.gene_name}" target="_blank">gNOMAD:${protein.gene_name} <i class="far fa-external-link-square"></i></a>
+                            <a href="https://gnomad.broadinstitute.org/gene/${protein.gene_name}" target="_blank">gnomAD:${protein.gene_name} <i class="far fa-external-link-square"></i></a>
                         ${line_aft()}
 
                             ###################### end ###################################
-
                       </ul>
                       </div>
                       </div>
                     </div>
     </div>
+
     <div class="row">
                 <!-- Feature -->
                 <div class="col-6 mb-4 pl-4">
@@ -183,6 +204,7 @@
 
 <%include file="results.js.mako" args="protein=protein, home=''"/>
 <%include file="report/create_modal.mako"/>
+<%include file="results/feedback_modal.mako"/>
 <script type="text/javascript" src="https://michelanglo.sgc.ox.ac.uk/michelanglo_menu.js"></script>
 </div>
 

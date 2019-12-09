@@ -230,7 +230,7 @@ $('.pdb').click(function () {
 
 
 ###  structure ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ###
-### python proteins.pdbs is a list of {'description': elem.attrib['id'], 'id': elem.attrib['id']+'_'+chainid, 'x': loca[0], 'y': loca[1]}
+### python proteins.pdbs was a list of {'description': elem.attrib['id'], 'id': elem.attrib['id']+'_'+chainid, 'x': loca[0], 'y': loca[1]}
 ### JS proteins is a list of {name: 'unique_name', type: 'rcsb' (default) | 'file' | 'data', value: xxx, 'ext': 'pdb' , loadFx: xxx}
 
 var collectedData = [];
@@ -275,9 +275,6 @@ var collectedData = [];
     } else {
         $('#viewport').append('<p><i class="far fa-dumpster-fire"></i> No model available.</p>');
     }
-
-
-
 
 ########### popover
 % if protein.pdbs+protein.pdb_matches+protein.swissmodel:

@@ -1,3 +1,5 @@
+> Depracated. This repo is no longer active. See [Michelanglo](https://github.com/matteoferla/MichelaNGLo).
+
 # VENUS (Variant Effect on Structure)
 A web app that gathers data on a protein and predict the effect of a SNV from a structural point of view.
 
